@@ -2,19 +2,22 @@
 
 export const dynamic = 'force-dynamic';
 
-import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Users, CalendarDays } from "lucide-react";
+import { Plus, Users, CalendarDays, LogOut } from "lucide-react";
 
 export default function Home() {
-  const { user, isLoaded, isSignedIn } = useUser();
+  const [email, setEmail] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [inputEmail, setInputEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
   const createOrUpdateUser = useMutation(api.users.createOrUpdateUser);
   const currentUser = useQuery(
     api.users.getCurrentUser,
-    isSignedIn && user ? { clerkId: user.id } : "skip"
+    email ? { email } : "skip"
   );
   const userGroups = useQuery(
     api.groups.getUserGroups,
@@ -22,17 +25,38 @@ export default function Home() {
   );
 
   useEffect(() => {
-    if (isSignedIn && user && !currentUser) {
-      createOrUpdateUser({
-        clerkId: user.id,
-        email: user.emailAddresses[0]?.emailAddress || "",
-        name: user.fullName || user.username || "Unknown",
-        imageUrl: user.imageUrl,
-      });
+    const storedEmail = localStorage.getItem("userEmail");
+    const storedName = localStorage.getItem("userName");
+    if (storedEmail) {
+      setEmail(storedEmail);
+      setName(storedName || "");
     }
-  }, [isSignedIn, user, currentUser, createOrUpdateUser]);
+    setIsLoading(false);
+  }, []);
 
-  if (!isLoaded) {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputEmail || !name) return;
+
+    await createOrUpdateUser({
+      email: inputEmail,
+      name: name,
+    });
+
+    localStorage.setItem("userEmail", inputEmail);
+    localStorage.setItem("userName", name);
+    setEmail(inputEmail);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userName");
+    setEmail(null);
+    setName("");
+    setInputEmail("");
+  };
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-900 via-amber-800 to-amber-950">
         <div className="text-white text-xl">Loading...</div>
@@ -40,11 +64,11 @@ export default function Home() {
     );
   }
 
-  if (!isSignedIn) {
+  if (!email) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-amber-900 via-amber-800 to-amber-950 p-4">
-        <div className="max-w-md w-full bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 text-center">
-          <div className="mb-8">
+        <div className="max-w-md w-full bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8">
+          <div className="mb-8 text-center">
             <h1 className="text-5xl font-bold text-amber-100 mb-2">🥃</h1>
             <h2 className="text-3xl font-bold text-white mb-2">
               WhiskeyTaste
@@ -54,22 +78,40 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="bg-white rounded-lg p-4 hover:bg-amber-50 transition">
-              <SignInButton mode="modal">
-                <button className="w-full font-semibold text-amber-900">
-                  Sign In
-                </button>
-              </SignInButton>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-amber-100 mb-2 text-sm">
+                Your Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg bg-white/20 border border-amber-300/30 text-white placeholder-amber-200/50 focus:outline-none focus:border-amber-300"
+                placeholder="John Doe"
+                required
+              />
             </div>
-            <div className="bg-amber-600 rounded-lg p-4 hover:bg-amber-700 transition">
-              <SignUpButton mode="modal">
-                <button className="w-full font-semibold text-white">
-                  Create Account
-                </button>
-              </SignUpButton>
+            <div>
+              <label className="block text-amber-100 mb-2 text-sm">
+                Email
+              </label>
+              <input
+                type="email"
+                value={inputEmail}
+                onChange={(e) => setInputEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg bg-white/20 border border-amber-300/30 text-white placeholder-amber-200/50 focus:outline-none focus:border-amber-300"
+                placeholder="john@example.com"
+                required
+              />
             </div>
-          </div>
+            <button
+              type="submit"
+              className="w-full bg-amber-600 text-white px-6 py-3 rounded-lg hover:bg-amber-700 transition font-semibold"
+            >
+              Get Started
+            </button>
+          </form>
 
           <div className="mt-8 text-amber-200 text-sm">
             <p className="mb-2">✨ Features:</p>
@@ -94,7 +136,16 @@ export default function Home() {
             <span className="text-3xl">🥃</span>
             <h1 className="text-2xl font-bold text-amber-900">WhiskeyTaste</h1>
           </div>
-          <UserButton afterSignOutUrl="/" />
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-amber-700">{name}</span>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 text-sm text-amber-600 hover:text-amber-800"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
@@ -102,7 +153,7 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-amber-900 mb-2">
-            Welcome back, {user?.firstName || "Taster"}!
+            Welcome back, {name.split(' ')[0]}!
           </h2>
           <p className="text-amber-700">
             Manage your groups and tasting sessions
@@ -140,7 +191,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {userGroups.map((group: any) => (
+              {userGroups.map((group) => (
                 <Link
                   key={group._id}
                   href={`/groups/${group._id}`}

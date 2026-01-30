@@ -3,12 +3,11 @@ import { v } from "convex/values";
 
 export default defineSchema({
   users: defineTable({
-    clerkId: v.string(),
     email: v.string(),
     name: v.string(),
-    imageUrl: v.optional(v.string()),
+    passwordHash: v.optional(v.string()),
     createdAt: v.number(),
-  }).index("by_clerk_id", ["clerkId"]),
+  }).index("by_email", ["email"]),
 
   groups: defineTable({
     name: v.string(),
@@ -63,12 +62,12 @@ export default defineSchema({
     name: v.string(),
     distillery: v.string(),
     age: v.optional(v.number()),
-    type: v.string(), // e.g., "Scotch", "Bourbon", "Irish", "Japanese"
+    type: v.string(),
     region: v.optional(v.string()),
-    abv: v.optional(v.number()), // Alcohol by volume
+    abv: v.optional(v.number()),
     caskType: v.optional(v.string()),
     description: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
     addedBy: v.id("users"),
     createdAt: v.number(),
   })
@@ -79,8 +78,8 @@ export default defineSchema({
     bottleId: v.id("bottles"),
     userId: v.id("users"),
     sessionId: v.id("tastingSessions"),
-    score: v.number(), // 0-10 with 0.5 increments
-    nose: v.optional(v.string()), // Tasting notes
+    score: v.number(),
+    nose: v.optional(v.string()),
     palate: v.optional(v.string()),
     finish: v.optional(v.string()),
     notes: v.optional(v.string()),

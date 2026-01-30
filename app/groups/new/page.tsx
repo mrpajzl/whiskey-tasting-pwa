@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
@@ -10,16 +9,25 @@ import { ArrowLeft } from "lucide-react";
 
 export default function NewGroup() {
   const router = useRouter();
-  const { user, isSignedIn } = useUser();
+  const [email, setEmail] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentUser = useQuery(
     api.users.getCurrentUser,
-    isSignedIn && user ? { clerkId: user.id } : "skip"
+    email ? { email } : "skip"
   );
   const createGroup = useMutation(api.groups.createGroup);
+
+  useEffect(() => {
+    const storedEmail = localStorage.getItem("userEmail");
+    if (!storedEmail) {
+      router.push("/");
+    } else {
+      setEmail(storedEmail);
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +49,7 @@ export default function NewGroup() {
     }
   };
 
-  if (!isSignedIn || !currentUser) {
+  if (!email || !currentUser) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p>Loading...</p>
