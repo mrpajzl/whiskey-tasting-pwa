@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = 'force-dynamic';
-
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useState } from "react";
@@ -13,6 +11,7 @@ export default function Home() {
   const [name, setName] = useState("");
   const [inputEmail, setInputEmail] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
 
   const createOrUpdateUser = useMutation(api.users.createOrUpdateUser);
   const currentUser = useQuery(
@@ -25,11 +24,14 @@ export default function Home() {
   );
 
   useEffect(() => {
-    const storedEmail = localStorage.getItem("userEmail");
-    const storedName = localStorage.getItem("userName");
-    if (storedEmail) {
-      setEmail(storedEmail);
-      setName(storedName || "");
+    setIsMounted(true);
+    if (typeof window !== "undefined") {
+      const storedEmail = localStorage.getItem("userEmail");
+      const storedName = localStorage.getItem("userName");
+      if (storedEmail) {
+        setEmail(storedEmail);
+        setName(storedName || "");
+      }
     }
     setIsLoading(false);
   }, []);
@@ -56,7 +58,7 @@ export default function Home() {
     setInputEmail("");
   };
 
-  if (isLoading) {
+  if (!isMounted || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-900 via-amber-800 to-amber-950">
         <div className="text-white text-xl">Loading...</div>
