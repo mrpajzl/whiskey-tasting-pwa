@@ -27,7 +27,7 @@ export default function GroupDetail() {
   const inviteToGroup = useMutation(api.groups.inviteToGroup);
 
   const isAdmin =
-    group?.members.find((m) => m.userId === currentUser?._id)?.role ===
+    group?.members.find((m: any) => m.userId === currentUser?._id)?.role ===
     "admin";
 
   const handleInvite = async (e: React.FormEvent) => {
@@ -113,7 +113,7 @@ export default function GroupDetail() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {sessions.map((session) => (
+                  {sessions.map((session: any) => (
                     <Link
                       key={session._id}
                       href={`/sessions/${session._id}`}
@@ -205,7 +205,7 @@ export default function GroupDetail() {
               )}
 
               <div className="space-y-2">
-                {group.members.map((member) => (
+                {group.members.map((member: any) => (
                   <div
                     key={member._id}
                     className="flex items-center gap-3 p-2 rounded-lg hover:bg-amber-50"

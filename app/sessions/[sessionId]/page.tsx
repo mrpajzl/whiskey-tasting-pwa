@@ -106,7 +106,7 @@ export default function SessionDetail() {
           </div>
         ) : (
           <div className="space-y-4">
-            {session.bottles.map((bottle) => (
+            {session.bottles.map((bottle: any) => (
               <div
                 key={bottle._id}
                 className="bg-white rounded-xl shadow-md overflow-hidden"
