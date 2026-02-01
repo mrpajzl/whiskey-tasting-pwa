@@ -119,3 +119,76 @@ export const updateSessionStatus = mutation({
     });
   },
 });
+
+export const updateSession = mutation({
+  args: {
+    sessionId: v.id("tastingSessions"),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    location: v.optional(v.string()),
+    sessionDate: v.optional(v.number()),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Session not found");
+
+    const membership = await ctx.db
+      .query("groupMembers")
+      .withIndex("by_group_and_user", (q) =>
+        q.eq("groupId", session.groupId).eq("userId", args.userId)
+      )
+      .first();
+
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Only group admins can edit sessions");
+    }
+
+    const updates: any = {};
+    if (args.name !== undefined) updates.name = args.name;
+    if (args.description !== undefined) updates.description = args.description;
+    if (args.location !== undefined) updates.location = args.location;
+    if (args.sessionDate !== undefined) updates.sessionDate = args.sessionDate;
+
+    await ctx.db.patch(args.sessionId, updates);
+  },
+});
+
+export const deleteSession = mutation({
+  args: {
+    sessionId: v.id("tastingSessions"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Session not found");
+
+    const membership = await ctx.db
+      .query("groupMembers")
+      .withIndex("by_group_and_user", (q) =>
+        q.eq("groupId", session.groupId).eq("userId", args.userId)
+      )
+      .first();
+
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Only group admins can delete sessions");
+    }
+
+    // Delete all bottles and their ratings
+    const bottles = await ctx.db
+      .query("bottles")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .collect();
+
+    for (const bottle of bottles) {
+      const ratings = await ctx.db
+        .query("ratings")
+        .withIndex("by_bottle", (q) => q.eq("bottleId", bottle._id))
+        .collect();
+      await Promise.all(ratings.map((r) => ctx.db.delete(r._id)));
+      await ctx.db.delete(bottle._id);
+    }
+
+    await ctx.db.delete(args.sessionId);
+  },
+});

@@ -96,7 +96,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
 
     setIsSubmitting(true);
     try {
-      let imageUrl: string | undefined;
+      let imageStorageId: Id<"_storage"> | undefined;
 
       // Upload image if present
       if (imageFile) {
@@ -107,7 +107,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
           body: imageFile,
         });
         const { storageId } = await result.json();
-        imageUrl = storageId;
+        imageStorageId = storageId;
       }
 
       await addBottle({
@@ -121,7 +121,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
         abv: abv ? parseFloat(abv) : undefined,
         caskType: caskType.trim() || undefined,
         description: description.trim() || undefined,
-        imageUrl,
+        imageStorageId,
       });
 
       onClose();

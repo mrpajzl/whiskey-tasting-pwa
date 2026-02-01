@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Users, CalendarDays, LogOut } from "lucide-react";
+import { Plus, Users, CalendarDays, LogOut, Mail } from "lucide-react";
 
 export default function Home() {
   const [email, setEmail] = useState<string | null>(null);
@@ -22,6 +22,13 @@ export default function Home() {
     api.groups.getUserGroups,
     currentUser ? { userId: currentUser._id } : "skip"
   );
+  const pendingInvitations = useQuery(
+    api.groups.getPendingInvitations,
+    email ? { email } : "skip"
+  );
+
+  const acceptInvitation = useMutation(api.groups.acceptInvitation);
+  const declineInvitation = useMutation(api.groups.declineInvitation);
 
   useEffect(() => {
     setIsMounted(true);
@@ -161,6 +168,64 @@ export default function Home() {
             Manage your groups and tasting sessions
           </p>
         </div>
+
+        {/* Pending Invitations */}
+        {pendingInvitations && pendingInvitations.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold text-amber-900 mb-4 flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              Pending Invitations
+            </h3>
+            <div className="space-y-3">
+              {pendingInvitations.map((invite) => (
+                <div
+                  key={invite._id}
+                  className="bg-white rounded-xl p-4 shadow-md flex items-center justify-between"
+                >
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      {invite.group?.name}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Invited by {invite.inviter?.name}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          await acceptInvitation({
+                            invitationId: invite._id,
+                            userId: currentUser!._id,
+                          });
+                        } catch (error: any) {
+                          alert(error.message || "Failed to accept invitation");
+                        }
+                      }}
+                      className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition text-sm"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await declineInvitation({
+                            invitationId: invite._id,
+                          });
+                        } catch (error: any) {
+                          alert(error.message || "Failed to decline invitation");
+                        }
+                      }}
+                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition text-sm"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Groups Section */}
         <div className="mb-8">

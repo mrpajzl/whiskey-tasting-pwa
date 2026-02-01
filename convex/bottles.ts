@@ -12,7 +12,7 @@ export const addBottle = mutation({
     abv: v.optional(v.number()),
     caskType: v.optional(v.string()),
     description: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
@@ -71,7 +71,7 @@ export const updateBottle = mutation({
     abv: v.optional(v.number()),
     caskType: v.optional(v.string()),
     description: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
     const { bottleId, ...updates } = args;
