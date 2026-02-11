@@ -134,9 +134,9 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl max-w-2xl w-full my-8">
+        <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
           <h2 className="text-2xl font-bold text-amber-900">Add Bottle</h2>
           <button
             onClick={() => {
@@ -149,7 +149,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[calc(90vh-5rem)] overflow-y-auto">
           {/* Photo Section */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -238,7 +238,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Lagavulin 16"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                 required
               />
             </div>
@@ -251,7 +251,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
                 value={distillery}
                 onChange={(e) => setDistillery(e.target.value)}
                 placeholder="e.g., Lagavulin"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                 required
               />
             </div>
@@ -265,7 +265,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                 required
               >
                 <option value="Scotch">Scotch</option>
@@ -288,7 +288,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
                 onChange={(e) => setAge(e.target.value)}
                 placeholder="e.g., 16"
                 min="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
               />
             </div>
             <div>
@@ -303,7 +303,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
                 min="0"
                 max="100"
                 step="0.1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
               />
             </div>
           </div>
@@ -318,7 +318,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
                 placeholder="e.g., Islay"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
               />
             </div>
             <div>
@@ -330,7 +330,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
                 value={caskType}
                 onChange={(e) => setCaskType(e.target.value)}
                 placeholder="e.g., Ex-Bourbon"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
               />
             </div>
           </div>
@@ -343,7 +343,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Any notes about this bottle..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
               rows={3}
             />
           </div>
