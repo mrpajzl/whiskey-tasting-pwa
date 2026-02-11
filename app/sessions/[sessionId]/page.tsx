@@ -384,7 +384,7 @@ export default function SessionPage() {
                     type="text"
                     value={bottleName}
                     onChange={(e) => setBottleName(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                     required
                   />
                 </div>
@@ -396,7 +396,7 @@ export default function SessionPage() {
                     type="text"
                     value={distillery}
                     onChange={(e) => setDistillery(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                     required
                   />
                 </div>
@@ -407,7 +407,7 @@ export default function SessionPage() {
                   <select
                     value={type}
                     onChange={(e) => setType(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                   >
                     <option>Single Malt</option>
                     <option>Blended</option>
@@ -426,7 +426,7 @@ export default function SessionPage() {
                     type="number"
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                   />
                 </div>
                 <div>
@@ -437,7 +437,7 @@ export default function SessionPage() {
                     type="text"
                     value={region}
                     onChange={(e) => setRegion(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                     placeholder="Islay, Speyside, Kentucky..."
                   />
                 </div>
@@ -450,7 +450,7 @@ export default function SessionPage() {
                     step="0.1"
                     value={abv}
                     onChange={(e) => setAbv(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -461,7 +461,7 @@ export default function SessionPage() {
                     type="text"
                     value={caskType}
                     onChange={(e) => setCaskType(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                     placeholder="Ex-Bourbon, Sherry, Port..."
                   />
                 </div>
@@ -472,7 +472,7 @@ export default function SessionPage() {
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                     rows={2}
                   />
                 </div>
@@ -570,7 +570,7 @@ export default function SessionPage() {
                   <textarea
                     value={nose}
                     onChange={(e) => setNose(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                     rows={2}
                     placeholder="Aroma, scent notes..."
                   />
@@ -582,7 +582,7 @@ export default function SessionPage() {
                   <textarea
                     value={palate}
                     onChange={(e) => setPalate(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                     rows={2}
                     placeholder="Taste, flavor profile..."
                   />
@@ -594,7 +594,7 @@ export default function SessionPage() {
                   <textarea
                     value={finish}
                     onChange={(e) => setFinish(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                     rows={2}
                     placeholder="Aftertaste, length..."
                   />
@@ -606,7 +606,7 @@ export default function SessionPage() {
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                     rows={3}
                     placeholder="Overall impressions..."
                   />
@@ -652,7 +652,7 @@ export default function SessionPage() {
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                     required
                   />
                 </div>
@@ -664,7 +664,7 @@ export default function SessionPage() {
                     type="date"
                     value={editDate}
                     onChange={(e) => setEditDate(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                     required
                   />
                 </div>
@@ -676,7 +676,7 @@ export default function SessionPage() {
                     type="text"
                     value={editLocation}
                     onChange={(e) => setEditLocation(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                   />
                 </div>
                 <div>
@@ -690,7 +690,7 @@ export default function SessionPage() {
                         e.target.value as "upcoming" | "active" | "completed"
                       )
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                   >
                     <option value="upcoming">Upcoming</option>
                     <option value="active">Active</option>
@@ -704,7 +704,7 @@ export default function SessionPage() {
                   <textarea
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                     rows={3}
                   />
                 </div>
