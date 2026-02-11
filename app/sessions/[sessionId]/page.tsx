@@ -59,6 +59,12 @@ export default function SessionPage() {
     "upcoming" | "active" | "completed"
   >("upcoming");
 
+  // Loading states
+  const [isAddingBottle, setIsAddingBottle] = useState(false);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  const [isUpdatingSession, setIsUpdatingSession] = useState(false);
+  const [isDeletingSession, setIsDeletingSession] = useState(false);
+
   const currentUser = useQuery(
     api.users.getCurrentUser,
     email ? { email } : "skip"
@@ -125,6 +131,9 @@ export default function SessionPage() {
 
   const handleAddBottle = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isAddingBottle) return;
+    setIsAddingBottle(true);
 
     try {
       let imageStorageId: Id<"_storage"> | undefined;
@@ -158,6 +167,8 @@ export default function SessionPage() {
       setShowBottleModal(false);
     } catch (error: any) {
       alert(error.message || "Failed to add bottle");
+    } finally {
+      setIsAddingBottle(false);
     }
   };
 
@@ -202,6 +213,9 @@ export default function SessionPage() {
   const handleSubmitRating = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBottle) return;
+    
+    if (isSubmittingRating) return;
+    setIsSubmittingRating(true);
 
     try {
       await addOrUpdateRating({
@@ -219,6 +233,8 @@ export default function SessionPage() {
       setSelectedBottle(null);
     } catch (error: any) {
       alert(error.message || "Failed to save rating");
+    } finally {
+      setIsSubmittingRating(false);
     }
   };
 
@@ -233,6 +249,10 @@ export default function SessionPage() {
 
   const handleUpdateSession = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isUpdatingSession) return;
+    setIsUpdatingSession(true);
+    
     try {
       await updateSession({
         sessionId,
@@ -254,10 +274,15 @@ export default function SessionPage() {
       alert("Session updated!");
     } catch (error: any) {
       alert(error.message || "Failed to update session");
+    } finally {
+      setIsUpdatingSession(false);
     }
   };
 
   const handleDeleteSession = async () => {
+    if (isDeletingSession) return;
+    setIsDeletingSession(true);
+    
     try {
       await deleteSession({
         sessionId,
@@ -266,6 +291,7 @@ export default function SessionPage() {
       router.push(`/groups/${session.groupId}`);
     } catch (error: any) {
       alert(error.message || "Failed to delete session");
+      setIsDeletingSession(false);
     }
   };
 
@@ -512,9 +538,10 @@ export default function SessionPage() {
               <div className="flex gap-2 mt-6">
                 <button
                   type="submit"
-                  className="flex-1 bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition"
+                  disabled={isAddingBottle}
+                  className="flex-1 bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Add Bottle
+                  {isAddingBottle ? "Adding..." : "Add Bottle"}
                 </button>
                 <button
                   type="button"
@@ -522,7 +549,8 @@ export default function SessionPage() {
                     setShowBottleModal(false);
                     resetBottleForm();
                   }}
-                  className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+                  disabled={isAddingBottle}
+                  className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
@@ -616,9 +644,10 @@ export default function SessionPage() {
               <div className="flex gap-2 mt-6">
                 <button
                   type="submit"
-                  className="flex-1 bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition"
+                  disabled={isSubmittingRating}
+                  className="flex-1 bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save Rating
+                  {isSubmittingRating ? "Saving..." : "Save Rating"}
                 </button>
                 <button
                   type="button"
@@ -626,7 +655,8 @@ export default function SessionPage() {
                     setShowRatingModal(false);
                     setSelectedBottle(null);
                   }}
-                  className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+                  disabled={isSubmittingRating}
+                  className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
@@ -714,14 +744,16 @@ export default function SessionPage() {
               <div className="flex gap-2 mt-6">
                 <button
                   type="submit"
-                  className="flex-1 bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition"
+                  disabled={isUpdatingSession}
+                  className="flex-1 bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save
+                  {isUpdatingSession ? "Saving..." : "Save"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+                  disabled={isUpdatingSession}
+                  className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
@@ -746,13 +778,15 @@ export default function SessionPage() {
             <div className="flex gap-2">
               <button
                 onClick={handleDeleteSession}
-                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
+                disabled={isDeletingSession}
+                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Delete Forever
+                {isDeletingSession ? "Deleting..." : "Delete Forever"}
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+                disabled={isDeletingSession}
+                className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
