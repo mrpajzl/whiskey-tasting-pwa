@@ -380,7 +380,7 @@ export default function GroupPage() {
 
       {/* Invite Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto"><div className="min-h-screen flex items-center justify-center p-4 pt-20 pb-20">
           <div className="bg-white rounded-xl p-6 max-w-md w-full">
             <h3 className="text-xl font-bold text-amber-900 mb-4">
               Invite Member
@@ -418,11 +418,12 @@ export default function GroupPage() {
             </form>
           </div>
         </div>
+        </div>
       )}
 
       {/* Edit Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto"><div className="min-h-screen flex items-center justify-center p-4 pt-20 pb-20">
           <div className="bg-white rounded-xl p-6 max-w-md w-full">
             <h3 className="text-xl font-bold text-amber-900 mb-4">
               Edit Group
@@ -469,11 +470,12 @@ export default function GroupPage() {
             </form>
           </div>
         </div>
+        </div>
       )}
 
       {/* Delete Confirmation */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto"><div className="min-h-screen flex items-center justify-center p-4 pt-20 pb-20">
           <div className="bg-white rounded-xl p-6 max-w-md w-full">
             <h3 className="text-xl font-bold text-red-600 mb-4">
               Delete Group?
@@ -497,6 +499,7 @@ export default function GroupPage() {
               </button>
             </div>
           </div>
+        </div>
         </div>
       )}
     </div>

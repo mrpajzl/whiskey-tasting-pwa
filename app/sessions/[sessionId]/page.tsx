@@ -369,7 +369,7 @@ export default function SessionPage() {
 
       {/* Add Bottle Modal */}
       {showBottleModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto"><div className="min-h-screen flex items-center justify-center p-4 pt-20 pb-20">
           <div className="bg-white rounded-xl p-6 max-w-2xl w-full my-8">
             <h3 className="text-xl font-bold text-amber-900 mb-4">
               Add Bottle
@@ -530,11 +530,12 @@ export default function SessionPage() {
             </form>
           </div>
         </div>
+        </div>
       )}
 
       {/* Rating Modal */}
       {showRatingModal && selectedBottle && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto"><div className="min-h-screen flex items-center justify-center p-4 pt-20 pb-20">
           <div className="bg-white rounded-xl p-6 max-w-2xl w-full my-8">
             <h3 className="text-xl font-bold text-amber-900 mb-2">
               Rate {selectedBottle.name}
@@ -633,11 +634,12 @@ export default function SessionPage() {
             </form>
           </div>
         </div>
+        </div>
       )}
 
       {/* Edit Session Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto"><div className="min-h-screen flex items-center justify-center p-4 pt-20 pb-20">
           <div className="bg-white rounded-xl p-6 max-w-md w-full">
             <h3 className="text-xl font-bold text-amber-900 mb-4">
               Edit Session
@@ -727,11 +729,12 @@ export default function SessionPage() {
             </form>
           </div>
         </div>
+        </div>
       )}
 
       {/* Delete Confirmation */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto"><div className="min-h-screen flex items-center justify-center p-4 pt-20 pb-20">
           <div className="bg-white rounded-xl p-6 max-w-md w-full">
             <h3 className="text-xl font-bold text-red-600 mb-4">
               Delete Session?
@@ -755,6 +758,7 @@ export default function SessionPage() {
               </button>
             </div>
           </div>
+        </div>
         </div>
       )}
     </div>

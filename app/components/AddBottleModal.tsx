@@ -134,22 +134,23 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-2xl w-full my-8">
-        <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-          <h2 className="text-2xl font-bold text-amber-900">Add Bottle</h2>
-          <button
-            onClick={() => {
-              stopCamera();
-              onClose();
-            }}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+    <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto">
+      <div className="min-h-screen flex items-start justify-center p-4 pt-20 pb-20">
+        <div className="bg-white rounded-2xl max-w-2xl w-full">
+          <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+            <h2 className="text-2xl font-bold text-amber-900">Add Bottle</h2>
+            <button
+              onClick={() => {
+                stopCamera();
+                onClose();
+              }}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[calc(90vh-5rem)] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Photo Section */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -368,6 +369,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );
