@@ -4,7 +4,16 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Users, CalendarDays, LogOut, Mail } from "lucide-react";
+import {
+  Plus,
+  Users,
+  CalendarDays,
+  LogOut,
+  Mail,
+  Star,
+  ChevronRight,
+  Sparkles,
+} from "lucide-react";
 
 export default function Home() {
   const [email, setEmail] = useState<string | null>(null);
@@ -26,6 +35,7 @@ export default function Home() {
     api.groups.getPendingInvitations,
     email ? { email } : "skip"
   );
+  const dashboard = useQuery(api.dashboard.getUserDashboard, {});
 
   const acceptInvitation = useMutation(api.groups.acceptInvitation);
   const declineInvitation = useMutation(api.groups.declineInvitation);
@@ -162,11 +172,88 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-amber-900 mb-2">
-            Welcome back, {name.split(' ')[0]}!
+            Welcome back, {name.split(" ")[0]}!
           </h2>
           <p className="text-amber-700">
-            Manage your groups and tasting sessions
+            Manage your groups, sessions, bottles, and tasting notes.
           </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 mb-8">
+          <section className="bg-amber-900 text-amber-50 rounded-2xl p-6 shadow-lg">
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <div>
+                <p className="text-sm uppercase tracking-[0.2em] text-amber-200/80 mb-2">
+                  tasting hub
+                </p>
+                <h3 className="text-2xl font-bold mb-2">
+                  Keep every bottle, session, and score in one place
+                </h3>
+                <p className="text-amber-100/85 max-w-2xl">
+                  Perfect for tasting nights with friends, quick scoring at the table,
+                  and looking back at what was actually worth buying again.
+                </p>
+              </div>
+              <div className="hidden sm:flex items-center justify-center rounded-2xl bg-white/10 p-4">
+                <Sparkles className="w-10 h-10 text-amber-200" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+              <HeroMetric
+                label="Groups"
+                value={dashboard?.totalGroups ?? userGroups?.length ?? 0}
+              />
+              <HeroMetric
+                label="Sessions"
+                value={dashboard?.totalSessions ?? 0}
+              />
+              <HeroMetric
+                label="Bottles"
+                value={dashboard?.totalBottles ?? 0}
+              />
+              <HeroMetric
+                label="Ratings"
+                value={dashboard?.totalRatings ?? 0}
+              />
+            </div>
+          </section>
+
+          <section className="bg-white rounded-2xl p-6 shadow-md border border-amber-100">
+            <div className="flex items-center gap-2 mb-3 text-amber-800">
+              <CalendarDays className="w-5 h-5" />
+              <h3 className="text-lg font-semibold">Coming up</h3>
+            </div>
+            {dashboard?.upcomingSessions && dashboard.upcomingSessions.length > 0 ? (
+              <div className="space-y-3">
+                {dashboard.upcomingSessions.map((session) => (
+                  <Link
+                    key={session._id}
+                    href={`/sessions/${session._id}`}
+                    className="block rounded-xl border border-amber-100 p-4 hover:border-amber-300 hover:bg-amber-50/60 transition"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-amber-950">{session.name}</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {new Date(session.sessionDate).toLocaleDateString()} 
+                          {session.location ? ` • ${session.location}` : ""}
+                        </p>
+                        <p className="text-xs text-amber-700 mt-2">
+                          {session.bottleCount} {session.bottleCount === 1 ? "bottle" : "bottles"}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-amber-500 mt-1" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
+                No upcoming session yet. Create one and start planning the next tasting night.
+              </div>
+            )}
+          </section>
         </div>
 
         {/* Pending Invitations */}
@@ -290,47 +377,87 @@ export default function Home() {
           )}
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl p-6 shadow-md">
-            <div className="flex items-center gap-3">
-              <div className="bg-amber-100 p-3 rounded-lg">
-                <Users className="w-6 h-6 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-gray-600 text-sm">Total Groups</p>
-                <p className="text-2xl font-bold text-amber-900">
-                  {userGroups?.length || 0}
-                </p>
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <section className="bg-white rounded-2xl p-6 shadow-md border border-amber-100">
+            <div className="flex items-center gap-2 mb-4 text-amber-800">
+              <Star className="w-5 h-5" />
+              <h3 className="text-lg font-semibold">Recent ratings</h3>
             </div>
-          </div>
+            {dashboard?.recentRatings && dashboard.recentRatings.length > 0 ? (
+              <div className="space-y-3">
+                {dashboard.recentRatings.map((rating) => (
+                  <div
+                    key={rating._id}
+                    className="flex items-center justify-between gap-4 rounded-xl bg-amber-50/70 p-4"
+                  >
+                    <div>
+                      <p className="font-semibold text-amber-950">{rating.bottleName}</p>
+                      <p className="text-sm text-gray-600">{rating.distillery}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold text-amber-700">{rating.score.toFixed(1)}</p>
+                      <p className="text-xs text-gray-500">out of 10</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600">
+                No ratings yet. Add a bottle to a session and start scoring.
+              </div>
+            )}
+          </section>
 
-          <div className="bg-white rounded-xl p-6 shadow-md">
-            <div className="flex items-center gap-3">
-              <div className="bg-amber-100 p-3 rounded-lg">
-                <CalendarDays className="w-6 h-6 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-gray-600 text-sm">Sessions</p>
-                <p className="text-2xl font-bold text-amber-900">-</p>
-              </div>
+          <section className="bg-white rounded-2xl p-6 shadow-md border border-amber-100">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-amber-900">Overview</h3>
+              <span className="text-sm text-amber-700">
+                Avg. score {dashboard?.averageRating ? dashboard.averageRating.toFixed(1) : "-"}
+              </span>
             </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-md">
-            <div className="flex items-center gap-3">
-              <div className="bg-amber-100 p-3 rounded-lg">
-                <span className="text-2xl">🥃</span>
-              </div>
-              <div>
-                <p className="text-gray-600 text-sm">Bottles Rated</p>
-                <p className="text-2xl font-bold text-amber-900">-</p>
-              </div>
+            <div className="space-y-3 text-sm">
+              <OverviewRow
+                label="Pending invitations"
+                value={pendingInvitations?.length ?? 0}
+              />
+              <OverviewRow
+                label="Groups you are in"
+                value={userGroups?.length ?? 0}
+              />
+              <OverviewRow
+                label="Tracked sessions"
+                value={dashboard?.totalSessions ?? 0}
+              />
+              <OverviewRow
+                label="Saved bottles"
+                value={dashboard?.totalBottles ?? 0}
+              />
+              <OverviewRow
+                label="Written ratings"
+                value={dashboard?.totalRatings ?? 0}
+              />
             </div>
-          </div>
+          </section>
         </div>
       </main>
+    </div>
+  );
+}
+
+function HeroMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl bg-white/10 px-4 py-4 backdrop-blur-sm border border-white/10">
+      <p className="text-sm text-amber-100/80">{label}</p>
+      <p className="text-3xl font-bold text-white mt-1">{value}</p>
+    </div>
+  );
+}
+
+function OverviewRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-amber-100 px-4 py-3">
+      <span className="text-gray-600">{label}</span>
+      <span className="font-semibold text-amber-900">{value}</span>
     </div>
   );
 }
