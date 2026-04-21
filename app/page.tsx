@@ -216,8 +216,8 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-stone-100 text-stone-900">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-        <header className="mb-6 flex flex-col gap-4 rounded-[32px] bg-stone-950 px-6 py-6 text-white shadow-xl sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+        <header className="mb-4 flex flex-col gap-4 rounded-[28px] bg-stone-950 px-4 py-4 text-white shadow-xl sm:mb-6 sm:rounded-[32px] sm:px-6 sm:py-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.25em] text-amber-300/70">whiskey tasting</p>
             <h1 className="mt-2 text-3xl font-bold">Ahoj {displayName.split(" ")[0]}</h1>
@@ -243,13 +243,13 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="mb-6 grid gap-4 sm:grid-cols-3">
+        <div className="mb-4 grid gap-3 sm:mb-6 sm:gap-4 sm:grid-cols-3">
           <StatCard label="Sessiony" value={stats.sessionCount} />
           <StatCard label="Lahve" value={stats.bottleCount} />
           <StatCard label="Hodnocení" value={stats.ratingCount} />
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-6">
           <aside className="space-y-4">
             <div className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-stone-200">
               <div className="mb-4 flex items-center justify-between">
@@ -296,7 +296,7 @@ export default function Home() {
           <section className="space-y-6">
             {activeSession ? (
               <>
-                <div className="rounded-[32px] bg-white p-6 shadow-sm ring-1 ring-stone-200">
+                <div className="rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-stone-200 sm:rounded-[32px] sm:p-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <h2 className="text-2xl font-bold text-stone-900">{activeSession.name}</h2>
@@ -334,7 +334,7 @@ export default function Home() {
                 <div className="grid gap-4">
                   {activeSession.bottles.length ? (
                     activeSession.bottles.map((bottle, index) => (
-                      <article key={bottle._id} className="rounded-[32px] bg-white p-6 shadow-sm ring-1 ring-stone-200">
+                      <article key={bottle._id} className="rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-stone-200 sm:rounded-[32px] sm:p-6">
                         <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                           <div>
                             <div className="mb-2 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
@@ -374,14 +374,14 @@ export default function Home() {
                       </article>
                     ))
                   ) : (
-                    <div className="rounded-[32px] border border-dashed border-stone-300 bg-white p-10 text-center text-stone-500">
+                    <div className="rounded-[28px] border border-dashed border-stone-300 bg-white p-6 text-center text-stone-500 sm:rounded-[32px] sm:p-10">
                       Ještě tu nejsou žádné lahve. Přidej je před tastingem nebo průběžně během večera.
                     </div>
                   )}
                 </div>
               </>
             ) : (
-              <div className="rounded-[32px] bg-white p-10 text-center shadow-sm ring-1 ring-stone-200">
+              <div className="rounded-[28px] bg-white p-6 text-center shadow-sm ring-1 ring-stone-200 sm:rounded-[32px] sm:p-10">
                 <h2 className="text-2xl font-semibold text-stone-900">Začni novou session</h2>
                 <p className="mt-2 text-stone-500">Ať máš večer rychlý flow: session, lahve, hodnocení.</p>
                 <button
@@ -401,11 +401,11 @@ export default function Home() {
         <div className="fixed inset-0 z-40 overflow-y-auto bg-black/50 p-4">
           <div className="flex min-h-full items-end justify-center py-4 sm:items-center">
             <div className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
-            <div className="border-b border-stone-200 px-5 py-4">
+            <div className="border-b border-stone-200 px-4 py-3 sm:px-5 sm:py-4">
               <h2 className="text-xl font-semibold text-stone-900">Nová tasting session</h2>
               <p className="text-sm text-stone-500">Jen minimum polí, ať to nezdržuje.</p>
             </div>
-            <form onSubmit={handleCreateSession} className="max-h-[calc(100dvh-7rem)] space-y-4 overflow-y-auto px-5 py-5 overscroll-contain">
+            <form onSubmit={handleCreateSession} className="max-h-[calc(100dvh-7rem)] space-y-4 overflow-y-auto px-4 py-4 overscroll-contain sm:px-5 sm:py-5">
               <div>
                 <label className="mb-1 block text-sm font-medium text-stone-700">Název session</label>
                 <input

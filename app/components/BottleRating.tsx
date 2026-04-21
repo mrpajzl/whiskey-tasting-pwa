@@ -162,7 +162,7 @@ export default function BottleRating({ bottleId, sessionId, userId }: BottleRati
     <div className="overflow-hidden rounded-[28px] border border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-stone-50 shadow-sm">
       <button
         onClick={() => setExpanded((value) => !value)}
-        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+        className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left sm:px-5 sm:py-4"
       >
         <div>
           <div className="flex items-center gap-2 text-stone-900">
@@ -179,8 +179,8 @@ export default function BottleRating({ bottleId, sessionId, userId }: BottleRati
       </button>
 
       {expanded && (
-        <div className="space-y-6 border-t border-amber-100 px-4 py-5 sm:px-5">
-          <div className="rounded-[32px] bg-stone-950 px-4 py-5 text-white">
+        <div className="space-y-5 border-t border-amber-100 px-3 py-4 sm:space-y-6 sm:px-5 sm:py-5">
+          <div className="rounded-[28px] bg-stone-950 px-3 py-4 text-white sm:rounded-[32px] sm:px-4 sm:py-5">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.25em] text-amber-300/70">profil chuti</p>
