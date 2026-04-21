@@ -23,6 +23,7 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [showCreateSession, setShowCreateSession] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<Id<"tastingSessions"> | null>(null);
   const [showBottleModal, setShowBottleModal] = useState(false);
@@ -84,15 +85,21 @@ export default function Home() {
     e.preventDefault();
     setAuthError("");
 
-    if (!email.trim() || !name.trim() || !password.trim()) {
-      setAuthError("Vyplň jméno, email i heslo.");
+    if (!email.trim() || !password.trim()) {
+      setAuthError("Vyplň email a heslo.");
+      return;
+    }
+
+    if (authMode === "register" && !name.trim()) {
+      setAuthError("Při registraci vyplň i jméno.");
       return;
     }
 
     try {
-      await createOrUpdateUser({ email: email.trim(), name: name.trim() });
+      const finalName = authMode === "register" ? name.trim() : localStorage.getItem("wt_name") || email.trim().split("@")[0];
+      await createOrUpdateUser({ email: email.trim(), name: finalName });
       localStorage.setItem("wt_email", email.trim());
-      localStorage.setItem("wt_name", name.trim());
+      localStorage.setItem("wt_name", finalName);
       localStorage.setItem("wt_password", password);
     } catch {
       setAuthError("Přihlášení selhalo. Zkus to znovu.");
@@ -142,14 +149,39 @@ export default function Home() {
             <h1 className="text-3xl font-bold">Whiskey Tasting</h1>
             <p className="mt-2 text-sm text-amber-100/80">Jednoduchá appka na dnešní tasting, bez zbytečností.</p>
           </div>
+          <div className="mb-4 flex rounded-2xl bg-white/10 p-1 text-sm">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("login");
+                setAuthError("");
+              }}
+              className={`flex-1 rounded-xl px-3 py-2 ${authMode === "login" ? "bg-white text-stone-950" : "text-white/80"}`}
+            >
+              Přihlášení
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("register");
+                setAuthError("");
+              }}
+              className={`flex-1 rounded-xl px-3 py-2 ${authMode === "register" ? "bg-white text-stone-950" : "text-white/80"}`}
+            >
+              Registrace
+            </button>
+          </div>
+
           <form onSubmit={handleLogin} className="space-y-4">
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Tvoje jméno"
-              className="w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 outline-none placeholder:text-white/50"
-              required
-            />
+            {authMode === "register" && (
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Tvoje jméno"
+                className="w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 outline-none placeholder:text-white/50"
+                required
+              />
+            )}
             <input
               type="email"
               value={email}
@@ -168,7 +200,7 @@ export default function Home() {
             />
             {authError && <p className="text-sm text-rose-300">{authError}</p>}
             <button className="w-full rounded-2xl bg-amber-500 px-4 py-3 font-semibold text-stone-950 hover:bg-amber-400">
-              Přihlásit se
+              {authMode === "login" ? "Přihlásit se" : "Vytvořit účet"}
             </button>
           </form>
         </div>
