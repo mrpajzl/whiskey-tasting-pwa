@@ -69,4 +69,30 @@ export default defineSchema({
     .index("by_session", ["sessionId"])
     .index("by_bottle", ["bottleId"])
     .index("by_bottle_and_user", ["bottleId", "userId"]),
+
+  distilleries: defineTable({
+    name: v.string(),
+    nameLower: v.string(),
+    region: v.optional(v.string()),
+    country: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_name_lower", ["nameLower"]),
+
+  catalogBottles: defineTable({
+    name: v.string(),
+    nameLower: v.string(),
+    distillery: v.optional(v.string()),
+    distilleryLower: v.string(),
+    distilleryId: v.optional(v.id("distilleries")),
+    category: v.optional(v.string()),
+    region: v.optional(v.string()),
+    age: v.optional(v.number()),
+    abv: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_name_lower", ["nameLower"])
+    .index("by_distillery_lower", ["distilleryLower"]),
 });

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useMutation } from "convex/react";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Trash2, X } from "lucide-react";
+import { Search, Trash2, X } from "lucide-react";
 
 interface BottleDraft {
   _id?: Id<"bottles">;
@@ -34,12 +34,19 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
   const [age, setAge] = useState("");
   const [abv, setAbv] = useState("");
   const [notes, setNotes] = useState("");
+  const [searchText, setSearchText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const addBottle = useMutation(api.bottles.addBottle);
   const updateBottle = useMutation(api.bottles.updateBottle);
   const deleteBottle = useMutation(api.bottles.deleteBottle);
+  const learnFromBottle = useMutation(api.catalog.learnFromBottle);
+
+  const catalog = useQuery(
+    api.catalog.searchCatalog,
+    searchText.trim().length >= 2 ? { query: searchText } : "skip"
+  );
 
   useEffect(() => {
     if (!bottle) return;
@@ -51,6 +58,37 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
     setAbv(bottle.abv?.toString() ?? "");
     setNotes(bottle.notes ?? bottle.description ?? "");
   }, [bottle]);
+
+  const suggestions = useMemo(() => {
+    if (!catalog) return [];
+    return [
+      ...catalog.bottles.map((item) => ({
+        kind: "bottle" as const,
+        label: item.name,
+        sublabel: [item.distillery, item.region, item.abv ? `${item.abv}%` : null].filter(Boolean).join(" • "),
+        action: () => {
+          setName(item.name ?? "");
+          setDistillery(item.distillery ?? "");
+          setCategory(item.category ?? "Single Malt");
+          setRegion(item.region ?? "");
+          setAge(item.age?.toString() ?? "");
+          setAbv(item.abv?.toString() ?? "");
+          setNotes(item.notes ?? "");
+          setSearchText("");
+        },
+      })),
+      ...catalog.distilleries.map((item) => ({
+        kind: "distillery" as const,
+        label: item.name,
+        sublabel: item.region ?? "Palírna",
+        action: () => {
+          setDistillery(item.name ?? "");
+          setRegion(item.region ?? "");
+          setSearchText("");
+        },
+      })),
+    ].slice(0, 8);
+  }, [catalog]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +112,7 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
         await addBottle({ sessionId, userId, ...payload });
       }
 
+      await learnFromBottle(payload);
       onClose();
     } catch (error) {
       console.error(error);
@@ -103,130 +142,158 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4">
       <div className="flex min-h-full items-end justify-center py-4 sm:items-center">
         <div className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
-          <div>
-            <h2 className="text-xl font-semibold text-stone-900">{bottle ? "Upravit lahev" : "Přidat lahev"}</h2>
-            <p className="text-sm text-stone-500">Jen to důležité, zbytek můžeš doplnit později.</p>
-          </div>
-          <button onClick={onClose} className="rounded-full p-2 text-stone-500 hover:bg-stone-100">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="max-h-[calc(100dvh-7rem)] space-y-4 overflow-y-auto px-5 py-5 overscroll-contain">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-stone-700">Název lahve</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="např. Ardbeg 10"
-              className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
-              required
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-stone-700">Palírna</label>
-              <input
-                value={distillery}
-                onChange={(e) => setDistillery(e.target.value)}
-                placeholder="Ardbeg"
-                className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
-              />
+              <h2 className="text-xl font-semibold text-stone-900">{bottle ? "Upravit lahev" : "Přidat lahev"}</h2>
+              <p className="text-sm text-stone-500">Katalog si pamatuje předchozí lahve a palírny.</p>
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-stone-700">Kategorie</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
-              >
-                <option>Single Malt</option>
-                <option>Blended Malt</option>
-                <option>Blended Scotch</option>
-                <option>Bourbon</option>
-                <option>Rye</option>
-                <option>Irish</option>
-                <option>Japanese</option>
-                <option>Other</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-stone-700">Region</label>
-              <input
-                value={region}
-                onChange={(e) => setRegion(e.target.value)}
-                placeholder="Islay"
-                className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-stone-700">Stáří</label>
-              <input
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                inputMode="numeric"
-                placeholder="10"
-                className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-stone-700">ABV %</label>
-              <input
-                value={abv}
-                onChange={(e) => setAbv(e.target.value)}
-                inputMode="decimal"
-                placeholder="46"
-                className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-stone-700">Poznámka</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="např. první vzorek večera"
-              rows={3}
-              className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
-            />
-          </div>
-
-          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-            <button
-              type="submit"
-              disabled={isSubmitting || isDeleting}
-              className="flex-1 rounded-2xl bg-amber-600 px-4 py-3 font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
-            >
-              {isSubmitting ? (bottle ? "Ukládám..." : "Přidávám...") : bottle ? "Uložit změny" : "Přidat lahev"}
+            <button onClick={onClose} className="rounded-full p-2 text-stone-500 hover:bg-stone-100">
+              <X className="h-5 w-5" />
             </button>
+          </div>
 
-            {bottle?._id && (
+          <form onSubmit={handleSubmit} className="max-h-[calc(100dvh-7rem)] space-y-4 overflow-y-auto px-5 py-5 overscroll-contain">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-stone-700">Rychlé hledání v katalogu</label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                <input
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  placeholder="např. Ardbeg, Lagavulin 16, Springbank"
+                  className="w-full rounded-2xl border border-stone-300 py-3 pl-11 pr-4 outline-none focus:border-amber-500"
+                />
+              </div>
+              {suggestions.length > 0 && (
+                <div className="mt-2 overflow-hidden rounded-2xl border border-stone-200 bg-stone-50">
+                  {suggestions.map((item, index) => (
+                    <button
+                      key={`${item.kind}-${item.label}-${index}`}
+                      type="button"
+                      onClick={item.action}
+                      className="block w-full border-b border-stone-200 px-4 py-3 text-left last:border-b-0 hover:bg-white"
+                    >
+                      <p className="font-medium text-stone-900">{item.label}</p>
+                      <p className="text-sm text-stone-500">{item.sublabel}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-stone-700">Název lahve</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="např. Ardbeg 10"
+                className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                required
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-stone-700">Palírna</label>
+                <input
+                  value={distillery}
+                  onChange={(e) => setDistillery(e.target.value)}
+                  placeholder="Ardbeg"
+                  className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-stone-700">Kategorie</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                >
+                  <option>Single Malt</option>
+                  <option>Blended Malt</option>
+                  <option>Blended Scotch</option>
+                  <option>Bourbon</option>
+                  <option>Rye</option>
+                  <option>Irish</option>
+                  <option>Japanese</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-stone-700">Region</label>
+                <input
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  placeholder="Islay"
+                  className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-stone-700">Stáří</label>
+                <input
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  inputMode="numeric"
+                  placeholder="10"
+                  className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-stone-700">ABV %</label>
+                <input
+                  value={abv}
+                  onChange={(e) => setAbv(e.target.value)}
+                  inputMode="decimal"
+                  placeholder="46"
+                  className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-stone-700">Poznámka</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="např. první vzorek večera"
+                rows={3}
+                className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+              <button
+                type="submit"
+                disabled={isSubmitting || isDeleting}
+                className="flex-1 rounded-2xl bg-amber-600 px-4 py-3 font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                {isSubmitting ? (bottle ? "Ukládám..." : "Přidávám...") : bottle ? "Uložit změny" : "Přidat lahev"}
+              </button>
+
+              {bottle?._id && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isSubmitting || isDeleting}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-300 px-4 py-3 font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {isDeleting ? "Mažu..." : "Smazat"}
+                </button>
+              )}
+
               <button
                 type="button"
-                onClick={handleDelete}
-                disabled={isSubmitting || isDeleting}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-300 px-4 py-3 font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                onClick={onClose}
+                className="rounded-2xl border border-stone-300 px-4 py-3 font-medium text-stone-700 hover:bg-stone-50"
               >
-                <Trash2 className="h-4 w-4" />
-                {isDeleting ? "Mažu..." : "Smazat"}
+                Zrušit
               </button>
-            )}
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-2xl border border-stone-300 px-4 py-3 font-medium text-stone-700 hover:bg-stone-50"
-            >
-              Zrušit
-            </button>
-          </div>
-        </form>
+            </div>
+          </form>
         </div>
       </div>
     </div>
