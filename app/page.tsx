@@ -348,6 +348,7 @@ export default function Home() {
                               {[bottle.age ? `${bottle.age} yo` : null, bottle.abv ? `${bottle.abv}% ABV` : null].filter(Boolean).join(" • ")}
                             </p>
                             {(bottle.notes || bottle.description) && <p className="mt-3 text-sm text-stone-600">{bottle.notes ?? bottle.description}</p>}
+                            {bottle.imageStorageId && <BottleImage storageId={bottle.imageStorageId} />}
                           </div>
                           <div className="text-left sm:text-right">
                             <div className="flex items-center gap-2 sm:justify-end">
@@ -475,6 +476,20 @@ export default function Home() {
         />
       )}
     </main>
+  );
+}
+
+function BottleImage({ storageId }: { storageId: Id<"_storage"> }) {
+  const imageUrl = useQuery(api.files.getImageUrl, { storageId });
+
+  if (!imageUrl) return null;
+
+  return (
+    <img
+      src={imageUrl}
+      alt="Bottle"
+      className="mt-4 h-44 w-full rounded-2xl object-cover"
+    />
   );
 }
 

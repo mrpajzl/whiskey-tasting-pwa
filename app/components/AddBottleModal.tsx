@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Search, Trash2, X } from "lucide-react";
+import { ImagePlus, Search, Trash2, X } from "lucide-react";
 
 interface BottleDraft {
   _id?: Id<"bottles">;
@@ -17,6 +17,7 @@ interface BottleDraft {
   abv?: number;
   notes?: string;
   description?: string;
+  imageStorageId?: Id<"_storage">;
 }
 
 interface AddBottleModalProps {
@@ -35,6 +36,8 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
   const [abv, setAbv] = useState("");
   const [notes, setNotes] = useState("");
   const [searchText, setSearchText] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -42,6 +45,11 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
   const updateBottle = useMutation(api.bottles.updateBottle);
   const deleteBottle = useMutation(api.bottles.deleteBottle);
   const learnFromBottle = useMutation(api.catalog.learnFromBottle);
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  const existingImageUrl = useQuery(
+    api.files.getImageUrl,
+    bottle?.imageStorageId ? { storageId: bottle.imageStorageId } : "skip"
+  );
 
   const catalog = useQuery(
     api.catalog.searchCatalog,
@@ -57,6 +65,8 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
     setAge(bottle.age?.toString() ?? "");
     setAbv(bottle.abv?.toString() ?? "");
     setNotes(bottle.notes ?? bottle.description ?? "");
+    setImagePreview(null);
+    setImageFile(null);
   }, [bottle]);
 
   const suggestions = useMemo(() => {
@@ -96,6 +106,19 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
 
     setIsSubmitting(true);
     try {
+      let imageStorageId = bottle?.imageStorageId;
+
+      if (imageFile) {
+        const uploadUrl = await generateUploadUrl();
+        const result = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": imageFile.type },
+          body: imageFile,
+        });
+        const json = await result.json();
+        imageStorageId = json.storageId;
+      }
+
       const payload = {
         name: name.trim(),
         distillery: distillery.trim() || undefined,
@@ -104,6 +127,7 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
         age: age ? parseInt(age, 10) : undefined,
         abv: abv ? parseFloat(abv) : undefined,
         notes: notes.trim() || undefined,
+        imageStorageId,
       };
 
       if (bottle?._id) {
@@ -179,6 +203,49 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
                   ))}
                 </div>
               )}
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-stone-700">Fotka lahve</label>
+              <div className="rounded-2xl border border-dashed border-stone-300 p-4">
+                {(imagePreview || existingImageUrl) ? (
+                  <div className="space-y-3">
+                    <img
+                      src={imagePreview ?? existingImageUrl ?? undefined}
+                      alt="Bottle preview"
+                      className="h-48 w-full rounded-2xl object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImagePreview(null);
+                        setImageFile(null);
+                      }}
+                      className="text-sm font-medium text-rose-600 hover:text-rose-700"
+                    >
+                      Odebrat novou fotku
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex cursor-pointer flex-col items-center justify-center gap-2 py-4 text-center text-stone-500">
+                    <ImagePlus className="h-6 w-6" />
+                    <span className="font-medium">Nahrát fotku lahve</span>
+                    <span className="text-sm">JPG, PNG nebo HEIC z telefonu</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] ?? null;
+                        setImageFile(file);
+                        if (file) {
+                          setImagePreview(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
             </div>
 
             <div>
