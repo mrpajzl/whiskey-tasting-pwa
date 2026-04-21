@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { CalendarDays, LogOut, MapPin, Plus, Star, Wine } from "lucide-react";
+import { CalendarDays, LogOut, MapPin, Pencil, Plus, Star, Wine } from "lucide-react";
 import AddBottleModal from "./components/AddBottleModal";
 import BottleRating from "./components/BottleRating";
 
@@ -27,6 +27,7 @@ export default function Home() {
   const [showCreateSession, setShowCreateSession] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<Id<"tastingSessions"> | null>(null);
   const [showBottleModal, setShowBottleModal] = useState(false);
+  const [editingBottle, setEditingBottle] = useState<any | null>(null);
 
   const [sessionName, setSessionName] = useState("");
   const [sessionLocation, setSessionLocation] = useState("");
@@ -318,7 +319,10 @@ export default function Home() {
                       {activeSession.notes && <p className="mt-4 text-sm text-stone-600">{activeSession.notes}</p>}
                     </div>
                     <button
-                      onClick={() => setShowBottleModal(true)}
+                      onClick={() => {
+                        setEditingBottle(null);
+                        setShowBottleModal(true);
+                      }}
                       className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-600 px-4 py-3 font-semibold text-white hover:bg-amber-700"
                     >
                       <Plus className="h-4 w-4" />
@@ -346,9 +350,21 @@ export default function Home() {
                             {(bottle.notes || bottle.description) && <p className="mt-3 text-sm text-stone-600">{bottle.notes ?? bottle.description}</p>}
                           </div>
                           <div className="text-left sm:text-right">
-                            <div className="inline-flex items-center gap-2 rounded-full bg-stone-900 px-3 py-1 text-sm font-semibold text-white">
-                              <Star className="h-4 w-4 text-amber-300" />
-                              {bottle.averageOverall ? `${bottle.averageOverall.toFixed(1)}/5` : "bez skóre"}
+                            <div className="flex items-center gap-2 sm:justify-end">
+                              <div className="inline-flex items-center gap-2 rounded-full bg-stone-900 px-3 py-1 text-sm font-semibold text-white">
+                                <Star className="h-4 w-4 text-amber-300" />
+                                {bottle.averageOverall ? `${bottle.averageOverall.toFixed(1)}/5` : "bez skóre"}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setEditingBottle(bottle);
+                                  setShowBottleModal(true);
+                                }}
+                                className="inline-flex items-center gap-1 rounded-full border border-stone-300 px-3 py-1 text-sm font-medium text-stone-700 hover:bg-stone-50"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Upravit
+                              </button>
                             </div>
                             <p className="mt-2 text-xs text-stone-500">{bottle.ratingCount} hodnocení</p>
                           </div>
@@ -449,7 +465,11 @@ export default function Home() {
         <AddBottleModal
           sessionId={activeSession._id}
           userId={user._id}
-          onClose={() => setShowBottleModal(false)}
+          bottle={editingBottle ?? undefined}
+          onClose={() => {
+            setShowBottleModal(false);
+            setEditingBottle(null);
+          }}
         />
       )}
     </main>

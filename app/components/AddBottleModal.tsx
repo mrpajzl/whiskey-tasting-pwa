@@ -1,18 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
+
+interface BottleDraft {
+  _id?: Id<"bottles">;
+  name: string;
+  distillery?: string;
+  category?: string;
+  type?: string;
+  region?: string;
+  age?: number;
+  abv?: number;
+  notes?: string;
+  description?: string;
+}
 
 interface AddBottleModalProps {
   sessionId: Id<"tastingSessions">;
   userId: Id<"users">;
   onClose: () => void;
+  bottle?: BottleDraft;
 }
 
-export default function AddBottleModal({ sessionId, userId, onClose }: AddBottleModalProps) {
+export default function AddBottleModal({ sessionId, userId, onClose, bottle }: AddBottleModalProps) {
   const [name, setName] = useState("");
   const [distillery, setDistillery] = useState("");
   const [category, setCategory] = useState("Single Malt");
@@ -21,8 +35,22 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
   const [abv, setAbv] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const addBottle = useMutation(api.bottles.addBottle);
+  const updateBottle = useMutation(api.bottles.updateBottle);
+  const deleteBottle = useMutation(api.bottles.deleteBottle);
+
+  useEffect(() => {
+    if (!bottle) return;
+    setName(bottle.name ?? "");
+    setDistillery(bottle.distillery ?? "");
+    setCategory(bottle.category ?? bottle.type ?? "Single Malt");
+    setRegion(bottle.region ?? "");
+    setAge(bottle.age?.toString() ?? "");
+    setAbv(bottle.abv?.toString() ?? "");
+    setNotes(bottle.notes ?? bottle.description ?? "");
+  }, [bottle]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,9 +58,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
 
     setIsSubmitting(true);
     try {
-      await addBottle({
-        sessionId,
-        userId,
+      const payload = {
         name: name.trim(),
         distillery: distillery.trim() || undefined,
         category,
@@ -40,13 +66,36 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
         age: age ? parseInt(age, 10) : undefined,
         abv: abv ? parseFloat(abv) : undefined,
         notes: notes.trim() || undefined,
-      });
+      };
+
+      if (bottle?._id) {
+        await updateBottle({ bottleId: bottle._id, ...payload });
+      } else {
+        await addBottle({ sessionId, userId, ...payload });
+      }
+
       onClose();
     } catch (error) {
       console.error(error);
-      alert("Nepodařilo se přidat lahev.");
+      alert(bottle?._id ? "Nepodařilo se upravit lahev." : "Nepodařilo se přidat lahev.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!bottle?._id) return;
+    if (!confirm(`Opravdu smazat ${bottle.name}?`)) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteBottle({ bottleId: bottle._id });
+      onClose();
+    } catch (error) {
+      console.error(error);
+      alert("Nepodařilo se smazat lahev.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -55,7 +104,7 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
       <div className="w-full max-w-xl rounded-[28px] bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
           <div>
-            <h2 className="text-xl font-semibold text-stone-900">Přidat lahev</h2>
+            <h2 className="text-xl font-semibold text-stone-900">{bottle ? "Upravit lahev" : "Přidat lahev"}</h2>
             <p className="text-sm text-stone-500">Jen to důležité, zbytek můžeš doplnit později.</p>
           </div>
           <button onClick={onClose} className="rounded-full p-2 text-stone-500 hover:bg-stone-100">
@@ -147,14 +196,27 @@ export default function AddBottleModal({ sessionId, userId, onClose }: AddBottle
             />
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDeleting}
               className="flex-1 rounded-2xl bg-amber-600 px-4 py-3 font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
             >
-              {isSubmitting ? "Přidávám..." : "Přidat lahev"}
+              {isSubmitting ? (bottle ? "Ukládám..." : "Přidávám...") : bottle ? "Uložit změny" : "Přidat lahev"}
             </button>
+
+            {bottle?._id && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isSubmitting || isDeleting}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-300 px-4 py-3 font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                {isDeleting ? "Mažu..." : "Smazat"}
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onClose}

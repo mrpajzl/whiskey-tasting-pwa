@@ -35,6 +35,36 @@ export const addBottle = mutation({
   },
 });
 
+export const updateBottle = mutation({
+  args: {
+    bottleId: v.id("bottles"),
+    name: v.string(),
+    distillery: v.optional(v.string()),
+    category: v.optional(v.string()),
+    region: v.optional(v.string()),
+    age: v.optional(v.number()),
+    abv: v.optional(v.number()),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { bottleId, ...updates } = args;
+    await ctx.db.patch(bottleId, updates);
+  },
+});
+
+export const deleteBottle = mutation({
+  args: { bottleId: v.id("bottles") },
+  handler: async (ctx, args) => {
+    const ratings = await ctx.db
+      .query("ratings")
+      .withIndex("by_bottle", (q) => q.eq("bottleId", args.bottleId))
+      .collect();
+
+    await Promise.all(ratings.map((rating) => ctx.db.delete(rating._id)));
+    await ctx.db.delete(args.bottleId);
+  },
+});
+
 export const getBottle = query({
   args: { bottleId: v.id("bottles") },
   handler: async (ctx, args) => {
