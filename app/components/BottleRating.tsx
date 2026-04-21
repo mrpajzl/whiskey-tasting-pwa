@@ -259,7 +259,7 @@ export default function BottleRating({ bottleId, sessionId, userId }: BottleRati
                     <circle
                       cx={dot.x}
                       cy={dot.y}
-                      r="18"
+                      r="30"
                       fill="transparent"
                       onPointerDown={(event) => {
                         event.currentTarget.setPointerCapture(event.pointerId);
@@ -271,6 +271,7 @@ export default function BottleRating({ bottleId, sessionId, userId }: BottleRati
                         }
                       }}
                     />
+                    <circle cx={dot.x} cy={dot.y} r="16" fill={dot.color} fillOpacity="0.18" />
                     <circle cx={dot.x} cy={dot.y} r="10" fill={dot.color} stroke="white" strokeWidth="3" />
                     <circle cx={dot.x} cy={dot.y} r="4" fill="white" />
                   </g>
