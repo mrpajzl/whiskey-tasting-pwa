@@ -51,7 +51,7 @@ export const listSessionsForUser = query({
           ratingCount: ratings.length,
           averageOverall:
             ratings.length > 0
-              ? ratings.reduce((sum, rating) => sum + rating.overall, 0) / ratings.length
+              ? ratings.reduce((sum, rating) => sum + (rating.overall ?? rating.score ?? 0), 0) / ratings.length
               : null,
         };
       })
@@ -65,11 +65,10 @@ export const getSession = query({
     const session = await ctx.db.get(args.sessionId);
     if (!session) return null;
 
-    const bottles = await ctx.db
+    const bottles = (await ctx.db
       .query("bottles")
-      .withIndex("by_session_and_order", (q) => q.eq("sessionId", args.sessionId))
-      .order("asc")
-      .collect();
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .collect()).sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.createdAt - b.createdAt);
 
     const bottlesWithRatings = await Promise.all(
       bottles.map(async (bottle) => {
@@ -83,7 +82,7 @@ export const getSession = query({
           ratingCount: ratings.length,
           averageOverall:
             ratings.length > 0
-              ? ratings.reduce((sum, rating) => sum + rating.overall, 0) / ratings.length
+              ? ratings.reduce((sum, rating) => sum + (rating.overall ?? rating.score ?? 0), 0) / ratings.length
               : null,
         };
       })
@@ -91,6 +90,7 @@ export const getSession = query({
 
     return {
       ...session,
+      notes: session.notes ?? session.description,
       bottles: bottlesWithRatings,
     };
   },

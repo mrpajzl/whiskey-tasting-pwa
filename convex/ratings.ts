@@ -46,6 +46,7 @@ export const addOrUpdateRating = mutation({
         fruit: args.fruit,
         spice: args.spice,
         body: args.body,
+        score: args.overall,
         notes: args.notes,
         updatedAt: now,
       });
@@ -54,6 +55,7 @@ export const addOrUpdateRating = mutation({
 
     return await ctx.db.insert("ratings", {
       ...args,
+      score: args.overall,
       createdAt: now,
       updatedAt: now,
     });

@@ -338,12 +338,12 @@ export default function Home() {
                             </div>
                             <h3 className="text-xl font-bold text-stone-900">{bottle.name}</h3>
                             <p className="mt-1 text-sm text-stone-600">
-                              {[bottle.distillery, bottle.category, bottle.region].filter(Boolean).join(" • ") || "Bez detailů"}
+                              {[bottle.distillery, bottle.category ?? bottle.type, bottle.region].filter(Boolean).join(" • ") || "Bez detailů"}
                             </p>
                             <p className="mt-2 text-sm text-stone-500">
                               {[bottle.age ? `${bottle.age} yo` : null, bottle.abv ? `${bottle.abv}% ABV` : null].filter(Boolean).join(" • ")}
                             </p>
-                            {bottle.notes && <p className="mt-3 text-sm text-stone-600">{bottle.notes}</p>}
+                            {(bottle.notes || bottle.description) && <p className="mt-3 text-sm text-stone-600">{bottle.notes ?? bottle.description}</p>}
                           </div>
                           <div className="text-left sm:text-right">
                             <div className="inline-flex items-center gap-2 rounded-full bg-stone-900 px-3 py-1 text-sm font-semibold text-white">

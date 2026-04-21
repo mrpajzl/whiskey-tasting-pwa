@@ -9,7 +9,7 @@ export const getUserDashboard = query({
 
     const averageRating =
       ratings.length > 0
-        ? ratings.reduce((sum, rating) => sum + rating.overall, 0) / ratings.length
+        ? ratings.reduce((sum, rating) => sum + (rating.overall ?? rating.score ?? 0), 0) / ratings.length
         : null;
 
     return {

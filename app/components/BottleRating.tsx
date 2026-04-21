@@ -40,15 +40,15 @@ export default function BottleRating({ bottleId, sessionId, userId }: BottleRati
 
   useEffect(() => {
     if (!existingRating) return;
-    setOverall(existingRating.overall);
+    setOverall(existingRating.overall ?? existingRating.score ?? 3);
     setValues({
-      sweetness: existingRating.sweetness,
-      smoke: existingRating.smoke,
-      fruit: existingRating.fruit,
-      spice: existingRating.spice,
-      body: existingRating.body,
+      sweetness: existingRating.sweetness ?? 2,
+      smoke: existingRating.smoke ?? 2,
+      fruit: existingRating.fruit ?? 2,
+      spice: existingRating.spice ?? 2,
+      body: existingRating.body ?? 2,
     });
-    setNotes(existingRating.notes ?? "");
+    setNotes(existingRating.notes ?? existingRating.nose ?? existingRating.palate ?? existingRating.finish ?? "");
   }, [existingRating]);
 
   const handleSave = async () => {
@@ -85,7 +85,7 @@ export default function BottleRating({ bottleId, sessionId, userId }: BottleRati
           <div className="flex items-center gap-2 text-stone-900">
             <Star className="h-4 w-4 text-amber-500" />
             <span className="font-semibold">
-              {existingRating ? `Moje hodnocení ${existingRating.overall}/5` : "Přidat hodnocení"}
+              {existingRating ? `Moje hodnocení ${existingRating.overall ?? existingRating.score ?? 3}/5` : "Přidat hodnocení"}
             </span>
           </div>
           <p className="mt-1 text-sm text-stone-500">
