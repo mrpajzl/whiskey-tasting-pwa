@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Star } from "lucide-react";
+import { BarChart3, Save, Star } from "lucide-react";
 
 interface BottleRatingProps {
   bottleId: Id<"bottles">;
@@ -12,176 +12,155 @@ interface BottleRatingProps {
   userId: Id<"users">;
 }
 
-export default function BottleRating({ bottleId, sessionId, userId }: BottleRatingProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [score, setScore] = useState(5);
-  const [nose, setNose] = useState("");
-  const [palate, setPalate] = useState("");
-  const [finish, setFinish] = useState("");
-  const [notes, setNotes] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+const axes = [
+  { key: "sweetness", label: "Sladkost" },
+  { key: "smoke", label: "Kouř" },
+  { key: "fruit", label: "Ovocnost" },
+  { key: "spice", label: "Kořenitost" },
+  { key: "body", label: "Plnost" },
+] as const;
 
-  const existingRating = useQuery(api.ratings.getUserRating, {
-    bottleId,
-    userId,
+type AxisKey = (typeof axes)[number]["key"];
+
+export default function BottleRating({ bottleId, sessionId, userId }: BottleRatingProps) {
+  const existingRating = useQuery(api.ratings.getUserRating, { bottleId, userId });
+  const saveRating = useMutation(api.ratings.addOrUpdateRating);
+
+  const [expanded, setExpanded] = useState(false);
+  const [overall, setOverall] = useState(3);
+  const [values, setValues] = useState<Record<AxisKey, number>>({
+    sweetness: 2,
+    smoke: 2,
+    fruit: 2,
+    spice: 2,
+    body: 2,
   });
-  const addOrUpdateRating = useMutation(api.ratings.addOrUpdateRating);
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (existingRating) {
-      setScore(existingRating.score);
-      setNose(existingRating.nose || "");
-      setPalate(existingRating.palate || "");
-      setFinish(existingRating.finish || "");
-      setNotes(existingRating.notes || "");
-    }
+    if (!existingRating) return;
+    setOverall(existingRating.overall);
+    setValues({
+      sweetness: existingRating.sweetness,
+      smoke: existingRating.smoke,
+      fruit: existingRating.fruit,
+      spice: existingRating.spice,
+      body: existingRating.body,
+    });
+    setNotes(existingRating.notes ?? "");
   }, [existingRating]);
 
   const handleSave = async () => {
-    setIsSaving(true);
+    setSaving(true);
     try {
-      await addOrUpdateRating({
+      await saveRating({
         bottleId,
-        userId,
         sessionId,
-        score,
-        nose: nose || undefined,
-        palate: palate || undefined,
-        finish: finish || undefined,
-        notes: notes || undefined,
+        userId,
+        overall,
+        sweetness: values.sweetness,
+        smoke: values.smoke,
+        fruit: values.fruit,
+        spice: values.spice,
+        body: values.body,
+        notes: notes.trim() || undefined,
       });
-      setIsExpanded(false);
+      setExpanded(false);
     } catch (error) {
-      console.error("Failed to save rating:", error);
-      alert("Failed to save rating");
+      console.error(error);
+      alert("Nepodařilo se uložit hodnocení.");
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 
   return (
-    <div className="w-full">
-      {!isExpanded ? (
-        <button
-          onClick={() => setIsExpanded(true)}
-          className="w-full text-left"
-        >
-          {existingRating ? (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <Star className="w-5 h-5 text-amber-600 fill-amber-600" />
-                <span className="font-semibold text-amber-900">
-                  {existingRating.score.toFixed(1)}
-                </span>
-              </div>
-              <span className="text-sm text-gray-600">
-                Your rating • Click to edit
-              </span>
-            </div>
-          ) : (
-            <div className="text-amber-600 hover:text-amber-700 font-medium">
-              + Add your rating
-            </div>
-          )}
-        </button>
-      ) : (
-        <div className="space-y-4">
-          {/* Score Slider */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Score: <span className="text-2xl font-bold text-amber-600">{score.toFixed(1)}</span>/10
-            </label>
-            <div className="flex items-center gap-4">
-              <input
-                type="range"
-                min="0"
-                max="10"
-                step="0.5"
-                value={score}
-                onChange={(e) => setScore(parseFloat(e.target.value))}
-                className="flex-1 h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600"
-              />
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.floor(score) + 1 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`w-4 h-4 ${
-                      i < score ? "text-amber-500 fill-amber-500" : "text-gray-300"
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
+    <div className="rounded-3xl border border-stone-200 bg-stone-50 p-4">
+      <button
+        onClick={() => setExpanded((value) => !value)}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <div>
+          <div className="flex items-center gap-2 text-stone-900">
+            <Star className="h-4 w-4 text-amber-500" />
+            <span className="font-semibold">
+              {existingRating ? `Moje hodnocení ${existingRating.overall}/5` : "Přidat hodnocení"}
+            </span>
           </div>
+          <p className="mt-1 text-sm text-stone-500">
+            Rychlé skóre + 5 jednoduchých profilů chuti
+          </p>
+        </div>
+        <BarChart3 className="h-5 w-5 text-stone-400" />
+      </button>
 
-          {/* Tasting Notes */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nose
-              </label>
-              <textarea
-                value={nose}
-                onChange={(e) => setNose(e.target.value)}
-                placeholder="Aroma notes..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"
-                rows={2}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Palate
-              </label>
-              <textarea
-                value={palate}
-                onChange={(e) => setPalate(e.target.value)}
-                placeholder="Taste notes..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"
-                rows={2}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Finish
-              </label>
-              <textarea
-                value={finish}
-                onChange={(e) => setFinish(e.target.value)}
-                placeholder="Aftertaste notes..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"
-                rows={2}
-              />
-            </div>
-          </div>
-
-          {/* General Notes */}
+      {expanded && (
+        <div className="mt-5 space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Additional Notes
+            <label className="mb-2 block text-sm font-medium text-stone-700">
+              Celkový dojem: <span className="font-bold text-amber-700">{overall}/5</span>
             </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Any other thoughts..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"
-              rows={2}
+            <input
+              type="range"
+              min="0"
+              max="5"
+              step="1"
+              value={overall}
+              onChange={(e) => setOverall(Number(e.target.value))}
+              className="w-full accent-amber-600"
             />
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-2">
+          <div className="grid gap-4 sm:grid-cols-2">
+            {axes.map((axis) => (
+              <div key={axis.key}>
+                <label className="mb-2 block text-sm font-medium text-stone-700">
+                  {axis.label}: <span className="font-semibold text-stone-900">{values[axis.key]}/5</span>
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="5"
+                  step="1"
+                  value={values[axis.key]}
+                  onChange={(e) =>
+                    setValues((current) => ({
+                      ...current,
+                      [axis.key]: Number(e.target.value),
+                    }))
+                  }
+                  className="w-full accent-amber-600"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-stone-700">Poznámka</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="např. hodně kouřová, ale překvapivě sladká"
+              className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+            />
+          </div>
+
+          <div className="flex gap-3">
             <button
               onClick={handleSave}
-              disabled={isSaving}
-              className="flex-1 bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition disabled:opacity-50"
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-600 px-4 py-3 font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
             >
-              {isSaving ? "Saving..." : existingRating ? "Update Rating" : "Save Rating"}
+              <Save className="h-4 w-4" />
+              {saving ? "Ukládám..." : "Uložit hodnocení"}
             </button>
             <button
-              onClick={() => setIsExpanded(false)}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              onClick={() => setExpanded(false)}
+              className="rounded-2xl border border-stone-300 px-4 py-3 font-medium text-stone-700 hover:bg-white"
             >
-              Cancel
+              Zavřít
             </button>
           </div>
         </div>

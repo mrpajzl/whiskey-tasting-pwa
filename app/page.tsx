@@ -1,463 +1,399 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import {
-  Plus,
-  Users,
-  CalendarDays,
-  LogOut,
-  Mail,
-  Star,
-  ChevronRight,
-  Sparkles,
-} from "lucide-react";
+import type { Id } from "@/convex/_generated/dataModel";
+import { CalendarDays, LogOut, MapPin, Plus, Star, Wine } from "lucide-react";
+import AddBottleModal from "./components/AddBottleModal";
+import BottleRating from "./components/BottleRating";
+
+function formatDateTime(value: number) {
+  return new Date(value).toLocaleString("cs-CZ", {
+    day: "numeric",
+    month: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function Home() {
-  const [email, setEmail] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [inputEmail, setInputEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isMounted, setIsMounted] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [showCreateSession, setShowCreateSession] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState<Id<"tastingSessions"> | null>(null);
+  const [showBottleModal, setShowBottleModal] = useState(false);
+
+  const [sessionName, setSessionName] = useState("");
+  const [sessionLocation, setSessionLocation] = useState("");
+  const [sessionDate, setSessionDate] = useState(() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  });
+  const [sessionNotes, setSessionNotes] = useState("");
 
   const createOrUpdateUser = useMutation(api.users.createOrUpdateUser);
-  const currentUser = useQuery(
-    api.users.getCurrentUser,
-    email ? { email } : "skip"
-  );
-  const userGroups = useQuery(
-    api.groups.getUserGroups,
-    currentUser ? { userId: currentUser._id } : "skip"
-  );
-  const pendingInvitations = useQuery(
-    api.groups.getPendingInvitations,
-    email ? { email } : "skip"
-  );
-  const dashboard = useQuery(api.dashboard.getUserDashboard, {});
+  const createSession = useMutation(api.sessions.createSession);
 
-  const acceptInvitation = useMutation(api.groups.acceptInvitation);
-  const declineInvitation = useMutation(api.groups.declineInvitation);
+  const user = useQuery(api.users.getCurrentUser, email ? { email } : "skip");
+  const sessions = useQuery(api.sessions.listSessionsForUser, user ? { userId: user._id } : "skip");
+
+  const fallbackSessionId = sessions?.[0]?._id ?? null;
+  const activeSessionId = selectedSessionId ?? fallbackSessionId;
+  const activeSession = useQuery(
+    api.sessions.getSession,
+    activeSessionId ? { sessionId: activeSessionId } : "skip"
+  );
 
   useEffect(() => {
-    setIsMounted(true);
-    if (typeof window !== "undefined") {
-      const storedEmail = localStorage.getItem("userEmail");
-      const storedName = localStorage.getItem("userName");
-      if (storedEmail) {
-        setEmail(storedEmail);
-        setName(storedName || "");
-      }
-    }
-    setIsLoading(false);
+    const savedEmail = localStorage.getItem("wt_email") ?? "";
+    const savedName = localStorage.getItem("wt_name") ?? "";
+    if (savedEmail) setEmail(savedEmail);
+    if (savedName) setName(savedName);
+    setReady(true);
   }, []);
+
+  useEffect(() => {
+    if (!selectedSessionId && fallbackSessionId) {
+      setSelectedSessionId(fallbackSessionId);
+    }
+  }, [fallbackSessionId, selectedSessionId]);
+
+  const stats = useMemo(() => {
+    const bottleCount = sessions?.reduce((sum, session) => sum + session.bottleCount, 0) ?? 0;
+    const ratingCount = sessions?.reduce((sum, session) => sum + session.ratingCount, 0) ?? 0;
+    return {
+      sessionCount: sessions?.length ?? 0,
+      bottleCount,
+      ratingCount,
+    };
+  }, [sessions]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputEmail || !name) return;
+    if (!email.trim() || !name.trim()) return;
 
-    await createOrUpdateUser({
-      email: inputEmail,
-      name: name,
-    });
-
-    localStorage.setItem("userEmail", inputEmail);
-    localStorage.setItem("userName", name);
-    setEmail(inputEmail);
+    await createOrUpdateUser({ email: email.trim(), name: name.trim() });
+    localStorage.setItem("wt_email", email.trim());
+    localStorage.setItem("wt_name", name.trim());
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("userName");
-    setEmail(null);
+    localStorage.removeItem("wt_email");
+    localStorage.removeItem("wt_name");
+    setEmail("");
     setName("");
-    setInputEmail("");
+    setSelectedSessionId(null);
   };
 
-  if (!isMounted || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-900 via-amber-800 to-amber-950">
-        <div className="text-white text-xl">Loading...</div>
-      </div>
-    );
+  const handleCreateSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !sessionName.trim()) return;
+
+    const id = await createSession({
+      userId: user._id,
+      name: sessionName.trim(),
+      hostName: name.trim(),
+      sessionDate: new Date(sessionDate).getTime(),
+      location: sessionLocation.trim() || undefined,
+      notes: sessionNotes.trim() || undefined,
+    });
+
+    setSelectedSessionId(id);
+    setSessionName("");
+    setSessionLocation("");
+    setSessionNotes("");
+    setShowCreateSession(false);
+  };
+
+  if (!ready) {
+    return <div className="flex min-h-screen items-center justify-center bg-stone-950 text-stone-100">Načítám…</div>;
   }
 
-  if (!email) {
+  if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-amber-900 via-amber-800 to-amber-950 p-4">
-        <div className="max-w-md w-full bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8">
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#78350f,_#1c1917_55%)] px-4 py-10 text-white">
+        <div className="mx-auto max-w-md rounded-[32px] border border-white/10 bg-white/10 p-8 backdrop-blur">
           <div className="mb-8 text-center">
-            <h1 className="text-5xl font-bold text-amber-100 mb-2">🥃</h1>
-            <h2 className="text-3xl font-bold text-white mb-2">
-              WhiskeyTaste
-            </h2>
-            <p className="text-amber-100">
-              Track and share your whiskey tasting experiences
-            </p>
+            <div className="mb-3 text-5xl">🥃</div>
+            <h1 className="text-3xl font-bold">Whiskey Tasting</h1>
+            <p className="mt-2 text-sm text-amber-100/80">Jednoduchá appka na dnešní tasting, bez zbytečností.</p>
           </div>
-
           <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-amber-100 mb-2 text-sm">
-                Your Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-white/20 border border-amber-300/30 text-white placeholder-amber-200/50 focus:outline-none focus:border-amber-300"
-                placeholder="John Doe"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-amber-100 mb-2 text-sm">
-                Email
-              </label>
-              <input
-                type="email"
-                value={inputEmail}
-                onChange={(e) => setInputEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-white/20 border border-amber-300/30 text-white placeholder-amber-200/50 focus:outline-none focus:border-amber-300"
-                placeholder="john@example.com"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-amber-600 text-white px-6 py-3 rounded-lg hover:bg-amber-700 transition font-semibold"
-            >
-              Get Started
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Tvoje jméno"
+              className="w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 outline-none placeholder:text-white/50"
+              required
+            />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email kvůli identitě"
+              className="w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 outline-none placeholder:text-white/50"
+              required
+            />
+            <button className="w-full rounded-2xl bg-amber-500 px-4 py-3 font-semibold text-stone-950 hover:bg-amber-400">
+              Pokračovat
             </button>
           </form>
-
-          <div className="mt-8 text-amber-200 text-sm">
-            <p className="mb-2">✨ Features:</p>
-            <ul className="space-y-1 text-left">
-              <li>• Create tasting groups with friends</li>
-              <li>• Track bottles and sessions</li>
-              <li>• Rate and review whiskeys</li>
-              <li>• Works offline as a PWA</li>
-            </ul>
-          </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-amber-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-amber-200">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span className="text-3xl">🥃</span>
-            <h1 className="text-2xl font-bold text-amber-900">WhiskeyTaste</h1>
+    <main className="min-h-screen bg-stone-100 text-stone-900">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <header className="mb-6 flex flex-col gap-4 rounded-[32px] bg-stone-950 px-6 py-6 text-white shadow-xl sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.25em] text-amber-300/70">whiskey tasting</p>
+            <h1 className="mt-2 text-3xl font-bold">Ahoj {name.split(" ")[0]}</h1>
+            <p className="mt-2 max-w-2xl text-sm text-stone-300">
+              Vytvoř session, naházej lahve a během ochutnávky rychle zapisuj dojmy i skóre.
+            </p>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-amber-700">{name}</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowCreateSession(true)}
+              className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-4 py-3 font-semibold text-stone-950 hover:bg-amber-400"
+            >
+              <Plus className="h-4 w-4" />
+              Nová session
+            </button>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 text-sm text-amber-600 hover:text-amber-800"
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/15 px-4 py-3 text-sm text-stone-200 hover:bg-white/10"
             >
-              <LogOut className="w-4 h-4" />
-              Logout
+              <LogOut className="h-4 w-4" />
+              Odhlásit
             </button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-amber-900 mb-2">
-            Welcome back, {name.split(" ")[0]}!
-          </h2>
-          <p className="text-amber-700">
-            Manage your groups, sessions, bottles, and tasting notes.
-          </p>
+        <div className="mb-6 grid gap-4 sm:grid-cols-3">
+          <StatCard label="Sessiony" value={stats.sessionCount} />
+          <StatCard label="Lahve" value={stats.bottleCount} />
+          <StatCard label="Hodnocení" value={stats.ratingCount} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 mb-8">
-          <section className="bg-amber-900 text-amber-50 rounded-2xl p-6 shadow-lg">
-            <div className="flex items-start justify-between gap-4 mb-6">
-              <div>
-                <p className="text-sm uppercase tracking-[0.2em] text-amber-200/80 mb-2">
-                  tasting hub
-                </p>
-                <h3 className="text-2xl font-bold mb-2">
-                  Keep every bottle, session, and score in one place
-                </h3>
-                <p className="text-amber-100/85 max-w-2xl">
-                  Perfect for tasting nights with friends, quick scoring at the table,
-                  and looking back at what was actually worth buying again.
-                </p>
+        <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <aside className="space-y-4">
+            <div className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-stone-200">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="font-semibold">Sessiony</h2>
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+                  {sessions?.length ?? 0}
+                </span>
               </div>
-              <div className="hidden sm:flex items-center justify-center rounded-2xl bg-white/10 p-4">
-                <Sparkles className="w-10 h-10 text-amber-200" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-              <HeroMetric
-                label="Groups"
-                value={dashboard?.totalGroups ?? userGroups?.length ?? 0}
-              />
-              <HeroMetric
-                label="Sessions"
-                value={dashboard?.totalSessions ?? 0}
-              />
-              <HeroMetric
-                label="Bottles"
-                value={dashboard?.totalBottles ?? 0}
-              />
-              <HeroMetric
-                label="Ratings"
-                value={dashboard?.totalRatings ?? 0}
-              />
-            </div>
-          </section>
-
-          <section className="bg-white rounded-2xl p-6 shadow-md border border-amber-100">
-            <div className="flex items-center gap-2 mb-3 text-amber-800">
-              <CalendarDays className="w-5 h-5" />
-              <h3 className="text-lg font-semibold">Coming up</h3>
-            </div>
-            {dashboard?.upcomingSessions && dashboard.upcomingSessions.length > 0 ? (
               <div className="space-y-3">
-                {dashboard.upcomingSessions.map((session) => (
-                  <Link
-                    key={session._id}
-                    href={`/sessions/${session._id}`}
-                    className="block rounded-xl border border-amber-100 p-4 hover:border-amber-300 hover:bg-amber-50/60 transition"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-amber-950">{session.name}</p>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {new Date(session.sessionDate).toLocaleDateString()} 
-                          {session.location ? ` • ${session.location}` : ""}
-                        </p>
-                        <p className="text-xs text-amber-700 mt-2">
-                          {session.bottleCount} {session.bottleCount === 1 ? "bottle" : "bottles"}
-                        </p>
+                {sessions?.length ? (
+                  sessions.map((session) => (
+                    <button
+                      key={session._id}
+                      onClick={() => setSelectedSessionId(session._id)}
+                      className={`w-full rounded-2xl border p-4 text-left transition ${
+                        activeSessionId === session._id
+                          ? "border-amber-400 bg-amber-50"
+                          : "border-stone-200 bg-stone-50 hover:border-stone-300"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="font-semibold text-stone-900">{session.name}</p>
+                        {session.averageOverall !== null && (
+                          <span className="rounded-full bg-stone-900 px-2.5 py-1 text-xs font-medium text-white">
+                            {session.averageOverall.toFixed(1)}/5
+                          </span>
+                        )}
                       </div>
-                      <ChevronRight className="w-4 h-4 text-amber-500 mt-1" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
-                No upcoming session yet. Create one and start planning the next tasting night.
-              </div>
-            )}
-          </section>
-        </div>
-
-        {/* Pending Invitations */}
-        {pendingInvitations && pendingInvitations.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold text-amber-900 mb-4 flex items-center gap-2">
-              <Mail className="w-5 h-5" />
-              Pending Invitations
-            </h3>
-            <div className="space-y-3">
-              {pendingInvitations.map((invite) => (
-                <div
-                  key={invite._id}
-                  className="bg-white rounded-xl p-4 shadow-md flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-semibold text-gray-900">
-                      {invite.group?.name}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Invited by {invite.inviter?.name}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={async () => {
-                        try {
-                          await acceptInvitation({
-                            invitationId: invite._id,
-                            userId: currentUser!._id,
-                          });
-                        } catch (error: any) {
-                          alert(error.message || "Failed to accept invitation");
-                        }
-                      }}
-                      className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition text-sm"
-                    >
-                      Accept
+                      <p className="mt-2 text-sm text-stone-500">{formatDateTime(session.sessionDate)}</p>
+                      <p className="mt-1 text-xs text-stone-500">
+                        {session.bottleCount} lahví, {session.ratingCount} hodnocení
+                      </p>
                     </button>
+                  ))
+                ) : (
+                  <div className="rounded-2xl bg-stone-50 p-4 text-sm text-stone-500">
+                    Zatím nic. Vytvoř první session a můžeš začít.
+                  </div>
+                )}
+              </div>
+            </div>
+          </aside>
+
+          <section className="space-y-6">
+            {activeSession ? (
+              <>
+                <div className="rounded-[32px] bg-white p-6 shadow-sm ring-1 ring-stone-200">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-stone-900">{activeSession.name}</h2>
+                      <div className="mt-3 flex flex-wrap gap-3 text-sm text-stone-600">
+                        <span className="inline-flex items-center gap-2 rounded-full bg-stone-100 px-3 py-1">
+                          <CalendarDays className="h-4 w-4" />
+                          {formatDateTime(activeSession.sessionDate)}
+                        </span>
+                        {activeSession.location && (
+                          <span className="inline-flex items-center gap-2 rounded-full bg-stone-100 px-3 py-1">
+                            <MapPin className="h-4 w-4" />
+                            {activeSession.location}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-2 rounded-full bg-stone-100 px-3 py-1">
+                          <Wine className="h-4 w-4" />
+                          {activeSession.bottles.length} lahví
+                        </span>
+                      </div>
+                      {activeSession.notes && <p className="mt-4 text-sm text-stone-600">{activeSession.notes}</p>}
+                    </div>
                     <button
-                      onClick={async () => {
-                        try {
-                          await declineInvitation({
-                            invitationId: invite._id,
-                          });
-                        } catch (error: any) {
-                          alert(error.message || "Failed to decline invitation");
-                        }
-                      }}
-                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition text-sm"
+                      onClick={() => setShowBottleModal(true)}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-600 px-4 py-3 font-semibold text-white hover:bg-amber-700"
                     >
-                      Decline
+                      <Plus className="h-4 w-4" />
+                      Přidat lahev
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
 
-        {/* Groups Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-semibold text-amber-900 flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Your Groups
-            </h3>
-            <Link
-              href="/groups/new"
-              className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              New Group
-            </Link>
-          </div>
-
-          {!userGroups || userGroups.length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center shadow-md">
-              <Users className="w-12 h-12 text-amber-300 mx-auto mb-4" />
-              <p className="text-gray-600 mb-4">
-                You haven't joined any groups yet
-              </p>
-              <Link
-                href="/groups/new"
-                className="inline-block bg-amber-600 text-white px-6 py-2 rounded-lg hover:bg-amber-700 transition"
-              >
-                Create Your First Group
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {userGroups.map((group) => (
-                <Link
-                  key={group._id}
-                  href={`/groups/${group._id}`}
-                  className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition border-2 border-transparent hover:border-amber-300"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <h4 className="text-lg font-semibold text-amber-900">
-                      {group.name}
-                    </h4>
-                    {group.role === "admin" && (
-                      <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded">
-                        Admin
-                      </span>
-                    )}
-                  </div>
-                  {group.description && (
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                      {group.description}
-                    </p>
+                <div className="grid gap-4">
+                  {activeSession.bottles.length ? (
+                    activeSession.bottles.map((bottle, index) => (
+                      <article key={bottle._id} className="rounded-[32px] bg-white p-6 shadow-sm ring-1 ring-stone-200">
+                        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <div className="mb-2 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
+                              vzorek {index + 1}
+                            </div>
+                            <h3 className="text-xl font-bold text-stone-900">{bottle.name}</h3>
+                            <p className="mt-1 text-sm text-stone-600">
+                              {[bottle.distillery, bottle.category, bottle.region].filter(Boolean).join(" • ") || "Bez detailů"}
+                            </p>
+                            <p className="mt-2 text-sm text-stone-500">
+                              {[bottle.age ? `${bottle.age} yo` : null, bottle.abv ? `${bottle.abv}% ABV` : null].filter(Boolean).join(" • ")}
+                            </p>
+                            {bottle.notes && <p className="mt-3 text-sm text-stone-600">{bottle.notes}</p>}
+                          </div>
+                          <div className="text-left sm:text-right">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-stone-900 px-3 py-1 text-sm font-semibold text-white">
+                              <Star className="h-4 w-4 text-amber-300" />
+                              {bottle.averageOverall ? `${bottle.averageOverall.toFixed(1)}/5` : "bez skóre"}
+                            </div>
+                            <p className="mt-2 text-xs text-stone-500">{bottle.ratingCount} hodnocení</p>
+                          </div>
+                        </div>
+                        <BottleRating bottleId={bottle._id} sessionId={activeSession._id} userId={user._id} />
+                      </article>
+                    ))
+                  ) : (
+                    <div className="rounded-[32px] border border-dashed border-stone-300 bg-white p-10 text-center text-stone-500">
+                      Ještě tu nejsou žádné lahve. Přidej je před tastingem nebo průběžně během večera.
+                    </div>
                   )}
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Users className="w-4 h-4 mr-1" />
-                    {group.memberCount}{" "}
-                    {group.memberCount === 1 ? "member" : "members"}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <section className="bg-white rounded-2xl p-6 shadow-md border border-amber-100">
-            <div className="flex items-center gap-2 mb-4 text-amber-800">
-              <Star className="w-5 h-5" />
-              <h3 className="text-lg font-semibold">Recent ratings</h3>
-            </div>
-            {dashboard?.recentRatings && dashboard.recentRatings.length > 0 ? (
-              <div className="space-y-3">
-                {dashboard.recentRatings.map((rating) => (
-                  <div
-                    key={rating._id}
-                    className="flex items-center justify-between gap-4 rounded-xl bg-amber-50/70 p-4"
-                  >
-                    <div>
-                      <p className="font-semibold text-amber-950">{rating.bottleName}</p>
-                      <p className="text-sm text-gray-600">{rating.distillery}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xl font-bold text-amber-700">{rating.score.toFixed(1)}</p>
-                      <p className="text-xs text-gray-500">out of 10</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                </div>
+              </>
             ) : (
-              <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600">
-                No ratings yet. Add a bottle to a session and start scoring.
+              <div className="rounded-[32px] bg-white p-10 text-center shadow-sm ring-1 ring-stone-200">
+                <h2 className="text-2xl font-semibold text-stone-900">Začni novou session</h2>
+                <p className="mt-2 text-stone-500">Ať máš večer rychlý flow: session, lahve, hodnocení.</p>
+                <button
+                  onClick={() => setShowCreateSession(true)}
+                  className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-amber-600 px-4 py-3 font-semibold text-white hover:bg-amber-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  Vytvořit session
+                </button>
               </div>
             )}
           </section>
-
-          <section className="bg-white rounded-2xl p-6 shadow-md border border-amber-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-amber-900">Overview</h3>
-              <span className="text-sm text-amber-700">
-                Avg. score {dashboard?.averageRating ? dashboard.averageRating.toFixed(1) : "-"}
-              </span>
-            </div>
-            <div className="space-y-3 text-sm">
-              <OverviewRow
-                label="Pending invitations"
-                value={pendingInvitations?.length ?? 0}
-              />
-              <OverviewRow
-                label="Groups you are in"
-                value={userGroups?.length ?? 0}
-              />
-              <OverviewRow
-                label="Tracked sessions"
-                value={dashboard?.totalSessions ?? 0}
-              />
-              <OverviewRow
-                label="Saved bottles"
-                value={dashboard?.totalBottles ?? 0}
-              />
-              <OverviewRow
-                label="Written ratings"
-                value={dashboard?.totalRatings ?? 0}
-              />
-            </div>
-          </section>
         </div>
-      </main>
-    </div>
+      </div>
+
+      {showCreateSession && user && (
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/50 p-4 sm:items-center">
+          <div className="w-full max-w-xl rounded-[28px] bg-white shadow-2xl">
+            <div className="border-b border-stone-200 px-5 py-4">
+              <h2 className="text-xl font-semibold text-stone-900">Nová tasting session</h2>
+              <p className="text-sm text-stone-500">Jen minimum polí, ať to nezdržuje.</p>
+            </div>
+            <form onSubmit={handleCreateSession} className="space-y-4 px-5 py-5">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-stone-700">Název session</label>
+                <input
+                  value={sessionName}
+                  onChange={(e) => setSessionName(e.target.value)}
+                  placeholder="např. Islay evening"
+                  className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                  required
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-stone-700">Datum a čas</label>
+                  <input
+                    type="datetime-local"
+                    value={sessionDate}
+                    onChange={(e) => setSessionDate(e.target.value)}
+                    className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-stone-700">Místo</label>
+                  <input
+                    value={sessionLocation}
+                    onChange={(e) => setSessionLocation(e.target.value)}
+                    placeholder="např. doma"
+                    className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-stone-700">Poznámka</label>
+                <textarea
+                  value={sessionNotes}
+                  onChange={(e) => setSessionNotes(e.target.value)}
+                  rows={3}
+                  placeholder="např. blind tasting, 6 vzorků"
+                  className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button className="flex-1 rounded-2xl bg-amber-600 px-4 py-3 font-semibold text-white hover:bg-amber-700">
+                  Vytvořit session
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateSession(false)}
+                  className="rounded-2xl border border-stone-300 px-4 py-3 font-medium text-stone-700 hover:bg-stone-50"
+                >
+                  Zrušit
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showBottleModal && activeSession && user && (
+        <AddBottleModal
+          sessionId={activeSession._id}
+          userId={user._id}
+          onClose={() => setShowBottleModal(false)}
+        />
+      )}
+    </main>
   );
 }
 
-function HeroMetric({ label, value }: { label: string; value: number }) {
+function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl bg-white/10 px-4 py-4 backdrop-blur-sm border border-white/10">
-      <p className="text-sm text-amber-100/80">{label}</p>
-      <p className="text-3xl font-bold text-white mt-1">{value}</p>
-    </div>
-  );
-}
-
-function OverviewRow({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex items-center justify-between rounded-xl border border-amber-100 px-4 py-3">
-      <span className="text-gray-600">{label}</span>
-      <span className="font-semibold text-amber-900">{value}</span>
+    <div className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-stone-200">
+      <p className="text-sm text-stone-500">{label}</p>
+      <p className="mt-2 text-3xl font-bold text-stone-900">{value}</p>
     </div>
   );
 }

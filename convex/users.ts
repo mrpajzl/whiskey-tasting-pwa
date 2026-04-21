@@ -13,21 +13,15 @@ export const createOrUpdateUser = mutation({
       .first();
 
     if (existing) {
-      // Update existing user
-      await ctx.db.patch(existing._id, {
-        name: args.name,
-      });
+      await ctx.db.patch(existing._id, { name: args.name });
       return existing._id;
     }
 
-    // Create new user
-    const userId = await ctx.db.insert("users", {
+    return await ctx.db.insert("users", {
       email: args.email,
       name: args.name,
       createdAt: Date.now(),
     });
-
-    return userId;
   },
 });
 

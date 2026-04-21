@@ -1,62 +1,58 @@
-import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
 
 export const createSession = mutation({
   args: {
-    groupId: v.id("groups"),
     name: v.string(),
-    description: v.optional(v.string()),
-    location: v.optional(v.string()),
+    hostName: v.string(),
     sessionDate: v.number(),
+    location: v.optional(v.string()),
+    notes: v.optional(v.string()),
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    // Check if user is a member of the group
-    const membership = await ctx.db
-      .query("groupMembers")
-      .withIndex("by_group_and_user", (q) =>
-        q.eq("groupId", args.groupId).eq("userId", args.userId)
-      )
-      .first();
-
-    if (!membership) {
-      throw new Error("You must be a member of the group to create a session");
-    }
-
     return await ctx.db.insert("tastingSessions", {
-      groupId: args.groupId,
       name: args.name,
-      description: args.description,
-      location: args.location,
+      hostName: args.hostName,
       sessionDate: args.sessionDate,
+      location: args.location,
+      notes: args.notes,
+      status: "active",
       createdBy: args.userId,
       createdAt: Date.now(),
-      status: "upcoming",
     });
   },
 });
 
-export const getGroupSessions = query({
-  args: { groupId: v.id("groups") },
+export const listSessionsForUser = query({
+  args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const sessions = await ctx.db
       .query("tastingSessions")
-      .withIndex("by_group", (q) => q.eq("groupId", args.groupId))
+      .withIndex("by_created_by", (q) => q.eq("createdBy", args.userId))
       .order("desc")
       .collect();
 
     return await Promise.all(
       sessions.map(async (session) => {
-        const creator = await ctx.db.get(session.createdBy);
-        const bottlesCount = await ctx.db
+        const bottles = await ctx.db
           .query("bottles")
+          .withIndex("by_session", (q) => q.eq("sessionId", session._id))
+          .collect();
+
+        const ratings = await ctx.db
+          .query("ratings")
           .withIndex("by_session", (q) => q.eq("sessionId", session._id))
           .collect();
 
         return {
           ...session,
-          creator,
-          bottlesCount: bottlesCount.length,
+          bottleCount: bottles.length,
+          ratingCount: ratings.length,
+          averageOverall:
+            ratings.length > 0
+              ? ratings.reduce((sum, rating) => sum + rating.overall, 0) / ratings.length
+              : null,
         };
       })
     );
@@ -71,7 +67,8 @@ export const getSession = query({
 
     const bottles = await ctx.db
       .query("bottles")
-      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .withIndex("by_session_and_order", (q) => q.eq("sessionId", args.sessionId))
+      .order("asc")
       .collect();
 
     const bottlesWithRatings = await Promise.all(
@@ -81,24 +78,19 @@ export const getSession = query({
           .withIndex("by_bottle", (q) => q.eq("bottleId", bottle._id))
           .collect();
 
-        const avgRating =
-          ratings.length > 0
-            ? ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length
-            : null;
-
         return {
           ...bottle,
-          ratingsCount: ratings.length,
-          avgRating,
+          ratingCount: ratings.length,
+          averageOverall:
+            ratings.length > 0
+              ? ratings.reduce((sum, rating) => sum + rating.overall, 0) / ratings.length
+              : null,
         };
       })
     );
 
-    const creator = await ctx.db.get(session.createdBy);
-
     return {
       ...session,
-      creator,
       bottles: bottlesWithRatings,
     };
   },
@@ -107,88 +99,9 @@ export const getSession = query({
 export const updateSessionStatus = mutation({
   args: {
     sessionId: v.id("tastingSessions"),
-    status: v.union(
-      v.literal("upcoming"),
-      v.literal("active"),
-      v.literal("completed")
-    ),
+    status: v.union(v.literal("draft"), v.literal("active"), v.literal("completed")),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.sessionId, {
-      status: args.status,
-    });
-  },
-});
-
-export const updateSession = mutation({
-  args: {
-    sessionId: v.id("tastingSessions"),
-    name: v.optional(v.string()),
-    description: v.optional(v.string()),
-    location: v.optional(v.string()),
-    sessionDate: v.optional(v.number()),
-    userId: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    const session = await ctx.db.get(args.sessionId);
-    if (!session) throw new Error("Session not found");
-
-    const membership = await ctx.db
-      .query("groupMembers")
-      .withIndex("by_group_and_user", (q) =>
-        q.eq("groupId", session.groupId).eq("userId", args.userId)
-      )
-      .first();
-
-    if (!membership || membership.role !== "admin") {
-      throw new Error("Only group admins can edit sessions");
-    }
-
-    const updates: any = {};
-    if (args.name !== undefined) updates.name = args.name;
-    if (args.description !== undefined) updates.description = args.description;
-    if (args.location !== undefined) updates.location = args.location;
-    if (args.sessionDate !== undefined) updates.sessionDate = args.sessionDate;
-
-    await ctx.db.patch(args.sessionId, updates);
-  },
-});
-
-export const deleteSession = mutation({
-  args: {
-    sessionId: v.id("tastingSessions"),
-    userId: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    const session = await ctx.db.get(args.sessionId);
-    if (!session) throw new Error("Session not found");
-
-    const membership = await ctx.db
-      .query("groupMembers")
-      .withIndex("by_group_and_user", (q) =>
-        q.eq("groupId", session.groupId).eq("userId", args.userId)
-      )
-      .first();
-
-    if (!membership || membership.role !== "admin") {
-      throw new Error("Only group admins can delete sessions");
-    }
-
-    // Delete all bottles and their ratings
-    const bottles = await ctx.db
-      .query("bottles")
-      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
-      .collect();
-
-    for (const bottle of bottles) {
-      const ratings = await ctx.db
-        .query("ratings")
-        .withIndex("by_bottle", (q) => q.eq("bottleId", bottle._id))
-        .collect();
-      await Promise.all(ratings.map((r) => ctx.db.delete(r._id)));
-      await ctx.db.delete(bottle._id);
-    }
-
-    await ctx.db.delete(args.sessionId);
+    await ctx.db.patch(args.sessionId, { status: args.status });
   },
 });

@@ -1,24 +1,34 @@
-import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
+
+const clamp = (value: number) => {
+  if (value < 0 || value > 5 || !Number.isInteger(value)) {
+    throw new Error("Rating fields must be whole numbers from 0 to 5");
+  }
+  return value;
+};
 
 export const addOrUpdateRating = mutation({
   args: {
     bottleId: v.id("bottles"),
     userId: v.id("users"),
     sessionId: v.id("tastingSessions"),
-    score: v.number(),
-    nose: v.optional(v.string()),
-    palate: v.optional(v.string()),
-    finish: v.optional(v.string()),
+    overall: v.number(),
+    sweetness: v.number(),
+    smoke: v.number(),
+    fruit: v.number(),
+    spice: v.number(),
+    body: v.number(),
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Validate score (0-10 with 0.5 increments)
-    if (args.score < 0 || args.score > 10 || (args.score * 2) % 1 !== 0) {
-      throw new Error("Score must be between 0 and 10 with 0.5 increments");
-    }
+    clamp(args.overall);
+    clamp(args.sweetness);
+    clamp(args.smoke);
+    clamp(args.fruit);
+    clamp(args.spice);
+    clamp(args.body);
 
-    // Check if rating already exists
     const existingRating = await ctx.db
       .query("ratings")
       .withIndex("by_bottle_and_user", (q) =>
@@ -30,10 +40,12 @@ export const addOrUpdateRating = mutation({
 
     if (existingRating) {
       await ctx.db.patch(existingRating._id, {
-        score: args.score,
-        nose: args.nose,
-        palate: args.palate,
-        finish: args.finish,
+        overall: args.overall,
+        sweetness: args.sweetness,
+        smoke: args.smoke,
+        fruit: args.fruit,
+        spice: args.spice,
+        body: args.body,
         notes: args.notes,
         updatedAt: now,
       });
@@ -60,34 +72,5 @@ export const getUserRating = query({
         q.eq("bottleId", args.bottleId).eq("userId", args.userId)
       )
       .first();
-  },
-});
-
-export const getSessionRatings = query({
-  args: { sessionId: v.id("tastingSessions") },
-  handler: async (ctx, args) => {
-    const ratings = await ctx.db
-      .query("ratings")
-      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
-      .collect();
-
-    return await Promise.all(
-      ratings.map(async (rating) => {
-        const user = await ctx.db.get(rating.userId);
-        const bottle = await ctx.db.get(rating.bottleId);
-        return {
-          ...rating,
-          user,
-          bottle,
-        };
-      })
-    );
-  },
-});
-
-export const deleteRating = mutation({
-  args: { ratingId: v.id("ratings") },
-  handler: async (ctx, args) => {
-    await ctx.db.delete(args.ratingId);
   },
 });
