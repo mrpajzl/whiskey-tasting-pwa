@@ -71,6 +71,8 @@ export default function Home() {
     }
   }, [fallbackSessionId, selectedSessionId]);
 
+  const displayName = (name || email.split("@")[0] || "host").trim();
+
   const stats = useMemo(() => {
     const bottleCount = sessions?.reduce((sum, session) => sum + session.bottleCount, 0) ?? 0;
     const ratingCount = sessions?.reduce((sum, session) => sum + session.ratingCount, 0) ?? 0;
@@ -96,11 +98,14 @@ export default function Home() {
     }
 
     try {
-      const finalName = authMode === "register" ? name.trim() : localStorage.getItem("wt_name") || email.trim().split("@")[0];
+      const finalName = (
+        authMode === "register" ? name.trim() : localStorage.getItem("wt_name") || email.trim().split("@")[0]
+      ).trim();
       await createOrUpdateUser({ email: email.trim(), name: finalName });
       localStorage.setItem("wt_email", email.trim());
       localStorage.setItem("wt_name", finalName);
       localStorage.setItem("wt_password", password);
+      setName(finalName);
     } catch {
       setAuthError("Přihlášení selhalo. Zkus to znovu.");
     }
@@ -123,7 +128,7 @@ export default function Home() {
     const id = await createSession({
       userId: user._id,
       name: sessionName.trim(),
-      hostName: name.trim(),
+      hostName: displayName,
       sessionDate: new Date(sessionDate).getTime(),
       location: sessionLocation.trim() || undefined,
       notes: sessionNotes.trim() || undefined,
@@ -214,7 +219,7 @@ export default function Home() {
         <header className="mb-6 flex flex-col gap-4 rounded-[32px] bg-stone-950 px-6 py-6 text-white shadow-xl sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.25em] text-amber-300/70">whiskey tasting</p>
-            <h1 className="mt-2 text-3xl font-bold">Ahoj {name.split(" ")[0]}</h1>
+            <h1 className="mt-2 text-3xl font-bold">Ahoj {displayName.split(" ")[0]}</h1>
             <p className="mt-2 max-w-2xl text-sm text-stone-300">
               Vytvoř session, naházej lahve a během ochutnávky rychle zapisuj dojmy i skóre.
             </p>
