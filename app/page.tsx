@@ -21,6 +21,8 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [ready, setReady] = useState(false);
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
   const [showCreateSession, setShowCreateSession] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<Id<"tastingSessions"> | null>(null);
   const [showBottleModal, setShowBottleModal] = useState(false);
@@ -48,11 +50,18 @@ export default function Home() {
   );
 
   useEffect(() => {
-    const savedEmail = localStorage.getItem("wt_email") ?? "";
-    const savedName = localStorage.getItem("wt_name") ?? "";
-    if (savedEmail) setEmail(savedEmail);
-    if (savedName) setName(savedName);
-    setReady(true);
+    try {
+      const savedEmail = localStorage.getItem("wt_email") ?? "";
+      const savedName = localStorage.getItem("wt_name") ?? "";
+      const savedPassword = localStorage.getItem("wt_password") ?? "";
+      if (savedEmail) setEmail(savedEmail);
+      if (savedName) setName(savedName);
+      if (savedPassword) setPassword(savedPassword);
+    } catch {
+      // ignore storage issues
+    } finally {
+      setReady(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -73,18 +82,30 @@ export default function Home() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !name.trim()) return;
+    setAuthError("");
 
-    await createOrUpdateUser({ email: email.trim(), name: name.trim() });
-    localStorage.setItem("wt_email", email.trim());
-    localStorage.setItem("wt_name", name.trim());
+    if (!email.trim() || !name.trim() || !password.trim()) {
+      setAuthError("Vyplň jméno, email i heslo.");
+      return;
+    }
+
+    try {
+      await createOrUpdateUser({ email: email.trim(), name: name.trim() });
+      localStorage.setItem("wt_email", email.trim());
+      localStorage.setItem("wt_name", name.trim());
+      localStorage.setItem("wt_password", password);
+    } catch {
+      setAuthError("Přihlášení selhalo. Zkus to znovu.");
+    }
   };
 
   const handleLogout = () => {
     localStorage.removeItem("wt_email");
     localStorage.removeItem("wt_name");
+    localStorage.removeItem("wt_password");
     setEmail("");
     setName("");
+    setPassword("");
     setSelectedSessionId(null);
   };
 
@@ -133,12 +154,21 @@ export default function Home() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="email kvůli identitě"
+              placeholder="Email"
               className="w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 outline-none placeholder:text-white/50"
               required
             />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Heslo"
+              className="w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 outline-none placeholder:text-white/50"
+              required
+            />
+            {authError && <p className="text-sm text-rose-300">{authError}</p>}
             <button className="w-full rounded-2xl bg-amber-500 px-4 py-3 font-semibold text-stone-950 hover:bg-amber-400">
-              Pokračovat
+              Přihlásit se
             </button>
           </form>
         </div>
