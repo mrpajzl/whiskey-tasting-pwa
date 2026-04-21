@@ -136,7 +136,15 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
         await addBottle({ sessionId, userId, ...payload });
       }
 
-      await learnFromBottle(payload);
+      await learnFromBottle({
+        name: payload.name,
+        distillery: payload.distillery,
+        category: payload.category,
+        region: payload.region,
+        age: payload.age,
+        abv: payload.abv,
+        notes: payload.notes,
+      });
       onClose();
     } catch (error) {
       console.error(error);
