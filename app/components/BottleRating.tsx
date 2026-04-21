@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -22,13 +22,14 @@ const axes = [
 
 type AxisKey = (typeof axes)[number]["key"];
 
-const size = 220;
+const size = 320;
 const center = size / 2;
-const maxRadius = 74;
+const maxRadius = 112;
 
 export default function BottleRating({ bottleId, sessionId, userId }: BottleRatingProps) {
   const existingRating = useQuery(api.ratings.getUserRating, { bottleId, userId });
   const saveRating = useMutation(api.ratings.addOrUpdateRating);
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
   const [expanded, setExpanded] = useState(false);
   const [overall, setOverall] = useState(3);
@@ -60,16 +61,17 @@ export default function BottleRating({ bottleId, sessionId, userId }: BottleRati
     return strongest.map((axis) => axis.label.toLowerCase()).join(" + ");
   }, [values]);
 
-  const radar = useMemo(() => {
-    const pointFor = (index: number, value: number, scale = 1) => {
-      const angle = -Math.PI / 2 + (Math.PI * 2 * index) / axes.length;
-      const radius = (value / 5) * maxRadius * scale;
-      return {
-        x: center + Math.cos(angle) * radius,
-        y: center + Math.sin(angle) * radius,
-      };
+  const pointFor = (index: number, value: number, scale = 1) => {
+    const angle = -Math.PI / 2 + (Math.PI * 2 * index) / axes.length;
+    const radius = (value / 5) * maxRadius * scale;
+    return {
+      x: center + Math.cos(angle) * radius,
+      y: center + Math.sin(angle) * radius,
+      angle,
     };
+  };
 
+  const radar = useMemo(() => {
     const polygon = axes
       .map((axis, index) => {
         const point = pointFor(index, values[axis.key]);
@@ -87,23 +89,50 @@ export default function BottleRating({ bottleId, sessionId, userId }: BottleRati
     );
 
     const spokes = axes.map((_, index) => {
-      const point = pointFor(index, 5, 1.12);
+      const point = pointFor(index, 5, 1.08);
       return { x: point.x, y: point.y };
     });
 
     const labels = axes.map((axis, index) => {
-      const point = pointFor(index, 5, 1.42);
-      return { ...point, label: axis.label };
+      const point = pointFor(index, 5, 1.32);
+      return { ...point, label: axis.label, color: axis.color, value: values[axis.key], key: axis.key };
     });
 
     const dots = axes.map((axis, index) => ({
       ...pointFor(index, values[axis.key]),
       color: axis.color,
       key: axis.key,
+      value: values[axis.key],
+      label: axis.label,
     }));
 
     return { polygon, rings, spokes, labels, dots };
   }, [values]);
+
+  const updateAxisFromPointer = (axis: AxisKey, clientX: number, clientY: number) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const x = ((clientX - rect.left) / rect.width) * size;
+    const y = ((clientY - rect.top) / rect.height) * size;
+
+    const axisIndex = axes.findIndex((item) => item.key === axis);
+    if (axisIndex === -1) return;
+
+    const axisPoint = pointFor(axisIndex, 5);
+    const vectorX = axisPoint.x - center;
+    const vectorY = axisPoint.y - center;
+    const pointX = x - center;
+    const pointY = y - center;
+    const axisLengthSquared = vectorX * vectorX + vectorY * vectorY;
+    const projection = (pointX * vectorX + pointY * vectorY) / axisLengthSquared;
+    const nextValue = Math.max(0, Math.min(5, Math.round(projection * 5)));
+
+    setValues((current) => ({
+      ...current,
+      [axis]: nextValue,
+    }));
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -143,133 +172,168 @@ export default function BottleRating({ bottleId, sessionId, userId }: BottleRati
             </span>
           </div>
           <p className="mt-1 text-sm text-stone-500">
-            Radar profil chuti, rychlé ovládání a jasný výsledek
+            Radar profil chuti, velký graf a ovládání přímo prstem
           </p>
         </div>
         <ChevronDown className={`h-5 w-5 text-stone-400 transition ${expanded ? "rotate-180" : ""}`} />
       </button>
 
       {expanded && (
-        <div className="space-y-6 border-t border-amber-100 px-5 py-5">
-          <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
-            <div className="rounded-[28px] bg-stone-950 px-4 py-5 text-white">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.25em] text-amber-300/70">profil chuti</p>
-                  <p className="mt-1 text-sm text-stone-300">Nejsilnější směr: {profileText || "vyber chuť"}</p>
-                </div>
-                <Sparkles className="h-5 w-5 text-amber-300" />
+        <div className="space-y-6 border-t border-amber-100 px-4 py-5 sm:px-5">
+          <div className="rounded-[32px] bg-stone-950 px-4 py-5 text-white">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] text-amber-300/70">profil chuti</p>
+                <p className="mt-1 text-sm text-stone-300">Nejsilnější směr: {profileText || "vyber chuť"}</p>
               </div>
+              <Sparkles className="h-5 w-5 text-amber-300" />
+            </div>
 
-              <div className="mx-auto w-full max-w-[220px]">
-                <svg viewBox={`0 0 ${size} ${size}`} className="h-auto w-full overflow-visible">
-                  {radar.rings.map((ring, index) => (
-                    <polygon
-                      key={index}
-                      points={ring}
-                      fill="none"
-                      stroke="rgba(255,255,255,0.12)"
-                      strokeWidth="1"
-                    />
-                  ))}
-
-                  {radar.spokes.map((point, index) => (
-                    <line
-                      key={index}
-                      x1={center}
-                      y1={center}
-                      x2={point.x}
-                      y2={point.y}
-                      stroke="rgba(255,255,255,0.18)"
-                      strokeWidth="1"
-                    />
-                  ))}
-
+            <div className="mx-auto w-full max-w-[360px]">
+              <svg ref={svgRef} viewBox={`0 0 ${size} ${size}`} className="h-auto w-full overflow-visible touch-none select-none">
+                {radar.rings.map((ring, index) => (
                   <polygon
-                    points={radar.polygon}
-                    fill="rgba(245,158,11,0.30)"
-                    stroke="rgba(251,191,36,0.95)"
-                    strokeWidth="2.5"
-                    strokeLinejoin="round"
+                    key={index}
+                    points={ring}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.12)"
+                    strokeWidth="1"
                   />
+                ))}
 
-                  {radar.dots.map((dot) => (
-                    <circle key={dot.key} cx={dot.x} cy={dot.y} r="4.5" fill={dot.color} stroke="white" strokeWidth="2" />
-                  ))}
+                {radar.spokes.map((point, index) => (
+                  <line
+                    key={index}
+                    x1={center}
+                    y1={center}
+                    x2={point.x}
+                    y2={point.y}
+                    stroke="rgba(255,255,255,0.18)"
+                    strokeWidth="1"
+                  />
+                ))}
 
-                  {radar.labels.map((label) => (
+                <polygon
+                  points={radar.polygon}
+                  fill="rgba(245,158,11,0.30)"
+                  stroke="rgba(251,191,36,0.95)"
+                  strokeWidth="3"
+                  strokeLinejoin="round"
+                />
+
+                {radar.labels.map((label) => (
+                  <g key={label.key}>
                     <text
-                      key={label.label}
                       x={label.x}
-                      y={label.y}
+                      y={label.y - 10}
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      className="fill-stone-200 text-[11px] font-medium"
+                      className="fill-stone-200 text-[12px] font-semibold"
                     >
                       {label.label}
                     </text>
-                  ))}
-                </svg>
-              </div>
+                    <text
+                      x={label.x}
+                      y={label.y + 10}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      className="fill-stone-400 text-[11px]"
+                    >
+                      {label.value}/5
+                    </text>
+                  </g>
+                ))}
 
-              <div className="mt-4 rounded-2xl bg-white/8 px-4 py-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-stone-400">celkový dojem</p>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-3xl font-bold text-amber-300">{overall}/5</span>
-                  <span className="text-sm text-stone-300">{overall <= 1 ? "slabé" : overall <= 3 ? "dobré" : "výborné"}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="5"
-                  step="1"
-                  value={overall}
-                  onChange={(e) => setOverall(Number(e.target.value))}
-                  className="mt-3 w-full accent-amber-500"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {axes.map((axis) => (
-                <div key={axis.key} className="rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm">
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: axis.color }} />
-                        <p className="font-semibold text-stone-900">{axis.label}</p>
-                      </div>
-                      <p className="mt-1 text-sm text-stone-500">{axis.hint}</p>
-                    </div>
-                    <span className="rounded-full bg-stone-100 px-3 py-1 text-sm font-semibold text-stone-700">
-                      {values[axis.key]}/5
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {[0, 1, 2, 3, 4, 5].map((step) => (
-                      <button
-                        key={step}
-                        type="button"
-                        onClick={() =>
-                          setValues((current) => ({
-                            ...current,
-                            [axis.key]: step,
-                          }))
+                {radar.dots.map((dot) => (
+                  <g key={dot.key}>
+                    <line
+                      x1={center}
+                      y1={center}
+                      x2={dot.x}
+                      y2={dot.y}
+                      stroke={dot.color}
+                      strokeOpacity="0.45"
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                    />
+                    <circle
+                      cx={dot.x}
+                      cy={dot.y}
+                      r="18"
+                      fill="transparent"
+                      onPointerDown={(event) => {
+                        event.currentTarget.setPointerCapture(event.pointerId);
+                        updateAxisFromPointer(dot.key, event.clientX, event.clientY);
+                      }}
+                      onPointerMove={(event) => {
+                        if (event.buttons === 1) {
+                          updateAxisFromPointer(dot.key, event.clientX, event.clientY);
                         }
-                        className={`h-10 flex-1 rounded-2xl border text-sm font-semibold transition ${
-                          values[axis.key] === step
-                            ? "border-stone-900 bg-stone-900 text-white"
-                            : "border-stone-200 bg-stone-50 text-stone-600 hover:border-stone-300 hover:bg-stone-100"
-                        }`}
-                      >
-                        {step}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                      }}
+                    />
+                    <circle cx={dot.x} cy={dot.y} r="10" fill={dot.color} stroke="white" strokeWidth="3" />
+                    <circle cx={dot.x} cy={dot.y} r="4" fill="white" />
+                  </g>
+                ))}
+              </svg>
             </div>
+
+            <p className="mt-3 text-center text-sm text-stone-300">
+              Táhni barevné body po osách grafu. Na telefonu to funguje i prstem.
+            </p>
+
+            <div className="mt-4 rounded-2xl bg-white/8 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-stone-400">celkový dojem</p>
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-3xl font-bold text-amber-300">{overall}/5</span>
+                <span className="text-sm text-stone-300">{overall <= 1 ? "slabé" : overall <= 3 ? "dobré" : "výborné"}</span>
+              </div>
+              <div className="mt-3 grid grid-cols-6 gap-2">
+                {[0, 1, 2, 3, 4, 5].map((step) => (
+                  <button
+                    key={step}
+                    type="button"
+                    onClick={() => setOverall(step)}
+                    className={`h-11 rounded-2xl border text-sm font-semibold transition ${
+                      overall === step
+                        ? "border-amber-400 bg-amber-400 text-stone-950"
+                        : "border-white/10 bg-white/6 text-stone-200 hover:bg-white/12"
+                    }`}
+                  >
+                    {step}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {axes.map((axis) => (
+              <button
+                key={axis.key}
+                type="button"
+                onClick={() =>
+                  setValues((current) => ({
+                    ...current,
+                    [axis.key]: (current[axis.key] + 1) % 6,
+                  }))
+                }
+                className="rounded-[24px] border border-stone-200 bg-white p-4 text-left shadow-sm transition hover:border-stone-300 hover:bg-stone-50"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: axis.color }} />
+                      <p className="font-semibold text-stone-900">{axis.label}</p>
+                    </div>
+                    <p className="mt-1 text-sm text-stone-500">{axis.hint}</p>
+                  </div>
+                  <span className="rounded-full bg-stone-100 px-3 py-1 text-sm font-semibold text-stone-700">
+                    {values[axis.key]}/5
+                  </span>
+                </div>
+              </button>
+            ))}
           </div>
 
           <div className="rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm">
