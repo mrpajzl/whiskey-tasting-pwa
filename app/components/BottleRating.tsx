@@ -162,18 +162,13 @@ export default function BottleRating({ bottleId, sessionId, userId }: BottleRati
     <div className="overflow-hidden rounded-[28px] border border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-stone-50 shadow-sm">
       <button
         onClick={() => setExpanded((value) => !value)}
-        className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left sm:px-5 sm:py-4"
+        className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left sm:px-5 sm:py-3"
       >
-        <div>
-          <div className="flex items-center gap-2 text-stone-900">
-            <Star className="h-4 w-4 text-amber-500" />
-            <span className="font-semibold">
-              {existingRating ? `Moje hodnocení ${existingRating.overall ?? existingRating.score ?? 3}/5` : "Ohodnotit lahev"}
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-stone-500">
-            Radar profil chuti, velký graf a ovládání přímo prstem
-          </p>
+        <div className="flex items-center gap-2 text-stone-900">
+          <Star className="h-4 w-4 text-amber-500" />
+          <span className="font-semibold">
+            {existingRating ? `Moje hodnocení ${existingRating.overall ?? existingRating.score ?? 3}/5` : "Ohodnotit lahev"}
+          </span>
         </div>
         <ChevronDown className={`h-5 w-5 text-stone-400 transition ${expanded ? "rotate-180" : ""}`} />
       </button>
