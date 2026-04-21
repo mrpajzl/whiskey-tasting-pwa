@@ -397,13 +397,14 @@ export default function Home() {
       </div>
 
       {showCreateSession && user && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/50 p-4 sm:items-center">
-          <div className="w-full max-w-xl rounded-[28px] bg-white shadow-2xl">
+        <div className="fixed inset-0 z-40 overflow-y-auto bg-black/50 p-4">
+          <div className="flex min-h-full items-end justify-center py-4 sm:items-center">
+            <div className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
             <div className="border-b border-stone-200 px-5 py-4">
               <h2 className="text-xl font-semibold text-stone-900">Nová tasting session</h2>
               <p className="text-sm text-stone-500">Jen minimum polí, ať to nezdržuje.</p>
             </div>
-            <form onSubmit={handleCreateSession} className="space-y-4 px-5 py-5">
+            <form onSubmit={handleCreateSession} className="max-h-[calc(100dvh-7rem)] space-y-4 overflow-y-auto px-5 py-5 overscroll-contain">
               <div>
                 <label className="mb-1 block text-sm font-medium text-stone-700">Název session</label>
                 <input
@@ -457,6 +458,7 @@ export default function Home() {
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}

@@ -100,8 +100,9 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
-      <div className="w-full max-w-xl rounded-[28px] bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4">
+      <div className="flex min-h-full items-end justify-center py-4 sm:items-center">
+        <div className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
           <div>
             <h2 className="text-xl font-semibold text-stone-900">{bottle ? "Upravit lahev" : "Přidat lahev"}</h2>
@@ -112,7 +113,7 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 px-5 py-5">
+        <form onSubmit={handleSubmit} className="max-h-[calc(100dvh-7rem)] space-y-4 overflow-y-auto px-5 py-5 overscroll-contain">
           <div>
             <label className="mb-1 block text-sm font-medium text-stone-700">Název lahve</label>
             <input
@@ -226,6 +227,7 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );
