@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { CalendarDays, LogOut, MapPin, Pencil, Plus, Star, Wine } from "lucide-react";
+import { CalendarDays, LogOut, MapPin, Pencil, Plus, Star, Users, Wine } from "lucide-react";
 import AddBottleModal from "./components/AddBottleModal";
 import BottleRating from "./components/BottleRating";
 
@@ -25,6 +25,7 @@ export default function Home() {
   const [authError, setAuthError] = useState("");
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [showCreateSession, setShowCreateSession] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<Id<"tastingSessions"> | null>(null);
   const [showBottleModal, setShowBottleModal] = useState(false);
   const [editingBottle, setEditingBottle] = useState<any | null>(null);
@@ -37,12 +38,19 @@ export default function Home() {
     return now.toISOString().slice(0, 16);
   });
   const [sessionNotes, setSessionNotes] = useState("");
+  const [sessionGroupId, setSessionGroupId] = useState("");
+  const [groupName, setGroupName] = useState("");
+  const [groupDescription, setGroupDescription] = useState("");
+  const [groupMembersInput, setGroupMembersInput] = useState("");
 
   const createOrUpdateUser = useMutation(api.users.createOrUpdateUser);
   const createSession = useMutation(api.sessions.createSession);
+  const createGroup = useMutation(api.groups.createGroup);
 
   const user = useQuery(api.users.getCurrentUser, email ? { email } : "skip");
   const sessions = useQuery(api.sessions.listSessionsForUser, user ? { userId: user._id } : "skip");
+  const groups = useQuery(api.groups.getUserGroups, user ? { userId: user._id } : "skip");
+  const safeGroups = (groups ?? []).filter((group): group is NonNullable<typeof group> => Boolean(group));
 
   const fallbackSessionId = sessions?.[0]?._id ?? null;
   const activeSessionId = selectedSessionId ?? fallbackSessionId;
@@ -133,13 +141,35 @@ export default function Home() {
       sessionDate: new Date(sessionDate).getTime(),
       location: sessionLocation.trim() || undefined,
       notes: sessionNotes.trim() || undefined,
+      groupId: sessionGroupId ? (sessionGroupId as Id<"groups">) : undefined,
     });
 
     setSelectedSessionId(id);
     setSessionName("");
     setSessionLocation("");
     setSessionNotes("");
+    setSessionGroupId("");
     setShowCreateSession(false);
+  };
+
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !groupName.trim()) return;
+
+    await createGroup({
+      userId: user._id,
+      name: groupName.trim(),
+      description: groupDescription.trim() || undefined,
+      memberEmails: groupMembersInput
+        .split(/[\n,;]/)
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean),
+    });
+
+    setGroupName("");
+    setGroupDescription("");
+    setGroupMembersInput("");
+    setShowCreateGroup(false);
   };
 
   if (!ready) {
@@ -227,6 +257,13 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-3">
             <button
+              onClick={() => setShowCreateGroup(true)}
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/15 px-4 py-3 text-sm text-stone-200 hover:bg-white/10"
+            >
+              <Users className="h-4 w-4" />
+              Nová skupina
+            </button>
+            <button
               onClick={() => setShowCreateSession(true)}
               className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-4 py-3 font-semibold text-stone-950 hover:bg-amber-400"
             >
@@ -279,6 +316,7 @@ export default function Home() {
                         )}
                       </div>
                       <p className="mt-2 text-sm text-stone-500">{formatDateTime(session.sessionDate)}</p>
+                      {session.groupName && <p className="mt-1 text-xs text-amber-700">Skupina: {session.groupName}</p>}
                       <p className="mt-1 text-xs text-stone-500">
                         {session.bottleCount} lahví, {session.ratingCount} hodnocení
                       </p>
@@ -437,6 +475,19 @@ export default function Home() {
                 </div>
               </div>
               <div>
+                <label className="mb-1 block text-sm font-medium text-stone-700">Skupina</label>
+                <select
+                  value={sessionGroupId}
+                  onChange={(e) => setSessionGroupId(e.target.value)}
+                  className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                >
+                  <option value="">Bez skupiny</option>
+                  {safeGroups.map((group) => (
+                    <option key={group._id} value={group._id}>{group.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="mb-1 block text-sm font-medium text-stone-700">Poznámka</label>
                 <textarea
                   value={sessionNotes}
@@ -459,6 +510,63 @@ export default function Home() {
                 </button>
               </div>
             </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateGroup && user && (
+        <div className="fixed inset-0 z-40 overflow-y-auto bg-black/50 p-4">
+          <div className="flex min-h-full items-end justify-center py-4 sm:items-center">
+            <div className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
+              <div className="border-b border-stone-200 px-4 py-3 sm:px-5 sm:py-4">
+                <h2 className="text-xl font-semibold text-stone-900">Nová skupina</h2>
+                <p className="text-sm text-stone-500">Členové skupiny budou automaticky součástí session vytvořených pro tuto skupinu.</p>
+              </div>
+              <form onSubmit={handleCreateGroup} className="max-h-[calc(100dvh-7rem)] space-y-4 overflow-y-auto px-4 py-4 overscroll-contain sm:px-5 sm:py-5">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-stone-700">Název skupiny</label>
+                  <input
+                    value={groupName}
+                    onChange={(e) => setGroupName(e.target.value)}
+                    placeholder="např. Whisky gang"
+                    className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-stone-700">Popis</label>
+                  <input
+                    value={groupDescription}
+                    onChange={(e) => setGroupDescription(e.target.value)}
+                    placeholder="např. pravidelné domácí tastingy"
+                    className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-stone-700">Členové (emaily)</label>
+                  <textarea
+                    value={groupMembersInput}
+                    onChange={(e) => setGroupMembersInput(e.target.value)}
+                    rows={4}
+                    placeholder="jeden@email.cz, druhy@email.cz"
+                    className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                  />
+                  <p className="mt-1 text-xs text-stone-500">Přidají se už existující uživatelé se stejným emailem.</p>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button className="flex-1 rounded-2xl bg-amber-600 px-4 py-3 font-semibold text-white hover:bg-amber-700">
+                    Vytvořit skupinu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateGroup(false)}
+                    className="rounded-2xl border border-stone-300 px-4 py-3 font-medium text-stone-700 hover:bg-stone-50"
+                  >
+                    Zrušit
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

@@ -9,14 +9,27 @@ export const createSession = mutation({
     location: v.optional(v.string()),
     notes: v.optional(v.string()),
     userId: v.id("users"),
+    groupId: v.optional(v.id("groups")),
   },
   handler: async (ctx, args) => {
+    if (args.groupId) {
+      const membership = await ctx.db
+        .query("groupMembers")
+        .withIndex("by_group_and_user", (q) => q.eq("groupId", args.groupId!).eq("userId", args.userId))
+        .first();
+
+      if (!membership) {
+        throw new Error("Do této skupiny nepatříš.");
+      }
+    }
+
     return await ctx.db.insert("tastingSessions", {
       name: args.name,
       hostName: args.hostName,
       sessionDate: args.sessionDate,
       location: args.location,
       notes: args.notes,
+      groupId: args.groupId,
       status: "active",
       createdBy: args.userId,
       createdAt: Date.now(),
@@ -27,11 +40,32 @@ export const createSession = mutation({
 export const listSessionsForUser = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const sessions = await ctx.db
+    const ownSessions = await ctx.db
       .query("tastingSessions")
       .withIndex("by_created_by", (q) => q.eq("createdBy", args.userId))
       .order("desc")
       .collect();
+
+    const memberships = await ctx.db
+      .query("groupMembers")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    const groupSessionsNested = await Promise.all(
+      memberships.map((membership) =>
+        ctx.db
+          .query("tastingSessions")
+          .filter((q) => q.eq(q.field("groupId"), membership.groupId))
+          .collect()
+      )
+    );
+
+    const sessionMap = new Map<string, any>();
+    [...ownSessions, ...groupSessionsNested.flat()].forEach((session) => {
+      sessionMap.set(session._id, session);
+    });
+
+    const sessions = [...sessionMap.values()].sort((a, b) => b.sessionDate - a.sessionDate);
 
     return await Promise.all(
       sessions.map(async (session) => {
@@ -45,8 +79,12 @@ export const listSessionsForUser = query({
           .withIndex("by_session", (q) => q.eq("sessionId", session._id))
           .collect();
 
+        const group = session.groupId ? await ctx.db.get(session.groupId) : null;
+        const groupName = group && "name" in group ? group.name : undefined;
+
         return {
           ...session,
+          groupName,
           bottleCount: bottles.length,
           ratingCount: ratings.length,
           averageOverall:

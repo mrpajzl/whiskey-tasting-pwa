@@ -6,50 +6,85 @@ export const createGroup = mutation({
     name: v.string(),
     description: v.optional(v.string()),
     userId: v.id("users"),
+    memberEmails: v.optional(v.array(v.string())),
   },
-  handler: async () => {
-    throw new Error("Groups are disabled in this simplified build.");
+  handler: async (ctx, args) => {
+    const groupId = await ctx.db.insert("groups", {
+      name: args.name,
+      description: args.description,
+      createdBy: args.userId,
+      createdAt: Date.now(),
+    });
+
+    await ctx.db.insert("groupMembers", {
+      groupId,
+      userId: args.userId,
+      role: "admin",
+      joinedAt: Date.now(),
+    });
+
+    const emails = [...new Set((args.memberEmails ?? []).map((email) => email.trim().toLowerCase()).filter(Boolean))];
+
+    for (const email of emails) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", email))
+        .first();
+
+      if (user && user._id !== args.userId) {
+        const existing = await ctx.db
+          .query("groupMembers")
+          .withIndex("by_group_and_user", (q) => q.eq("groupId", groupId).eq("userId", user._id))
+          .first();
+
+        if (!existing) {
+          await ctx.db.insert("groupMembers", {
+            groupId,
+            userId: user._id,
+            role: "member",
+            joinedAt: Date.now(),
+          });
+        }
+      }
+    }
+
+    return groupId;
   },
 });
 
 export const getUserGroups = query({
   args: { userId: v.id("users") },
-  handler: async () => {
-    return [];
-  },
-});
+  handler: async (ctx, args) => {
+    const memberships = await ctx.db
+      .query("groupMembers")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
 
-export const getGroup = query({
-  args: { groupId: v.string() },
-  handler: async () => {
-    return null;
-  },
-});
+    const groups = await Promise.all(
+      memberships.map(async (membership) => {
+        const group = await ctx.db.get(membership.groupId);
+        if (!group) return null;
 
-export const inviteMember = mutation({
-  args: { groupId: v.string(), email: v.string(), invitedBy: v.string() },
-  handler: async () => {
-    throw new Error("Groups are disabled in this simplified build.");
-  },
-});
+        const members = await ctx.db
+          .query("groupMembers")
+          .withIndex("by_group", (q) => q.eq("groupId", group._id))
+          .collect();
 
-export const getPendingInvitations = query({
-  args: { email: v.string() },
-  handler: async () => {
-    return [];
-  },
-});
+        const memberUsers = await Promise.all(members.map((member) => ctx.db.get(member.userId)));
 
-export const acceptInvitation = mutation({
-  args: { invitationId: v.string(), userId: v.string() },
-  handler: async () => {
-    throw new Error("Groups are disabled in this simplified build.");
-  },
-});
+        return {
+          ...group,
+          role: membership.role,
+          memberCount: members.length,
+          members: memberUsers.filter(Boolean).map((member) => ({
+            _id: member!._id,
+            name: member!.name,
+            email: member!.email,
+          })),
+        };
+      })
+    );
 
-export const declineInvitation = mutation({
-  args: { invitationId: v.string() },
-  handler: async () => {
-    throw new Error("Groups are disabled in this simplified build.");
+    return groups.filter(Boolean);
   },
 });
