@@ -39,12 +39,14 @@ export default function Home() {
   });
   const [sessionNotes, setSessionNotes] = useState("");
   const [sessionGroupId, setSessionGroupId] = useState("");
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState("private");
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
   const [groupMembersInput, setGroupMembersInput] = useState("");
 
   const createOrUpdateUser = useMutation(api.users.createOrUpdateUser);
   const createSession = useMutation(api.sessions.createSession);
+  const moveSessionToGroup = useMutation(api.sessions.moveSessionToGroup);
   const createGroup = useMutation(api.groups.createGroup);
 
   const user = useQuery(api.users.getCurrentUser, email ? { email } : "skip");
@@ -82,15 +84,28 @@ export default function Home() {
 
   const displayName = (name || email.split("@")[0] || "host").trim();
 
+  const filteredSessions = useMemo(() => {
+    const allSessions = sessions ?? [];
+    if (selectedGroupFilter === "all") return allSessions;
+    if (selectedGroupFilter === "private") return allSessions.filter((session) => !session.groupId);
+    return allSessions.filter((session) => session.groupId === selectedGroupFilter);
+  }, [sessions, selectedGroupFilter]);
+
+  useEffect(() => {
+    if (selectedSessionId && !filteredSessions.some((session) => session._id === selectedSessionId)) {
+      setSelectedSessionId(filteredSessions[0]?._id ?? null);
+    }
+  }, [filteredSessions, selectedSessionId]);
+
   const stats = useMemo(() => {
-    const bottleCount = sessions?.reduce((sum, session) => sum + session.bottleCount, 0) ?? 0;
-    const ratingCount = sessions?.reduce((sum, session) => sum + session.ratingCount, 0) ?? 0;
+    const bottleCount = filteredSessions.reduce((sum, session) => sum + session.bottleCount, 0);
+    const ratingCount = filteredSessions.reduce((sum, session) => sum + session.ratingCount, 0);
     return {
-      sessionCount: sessions?.length ?? 0,
+      sessionCount: filteredSessions.length,
       bottleCount,
       ratingCount,
     };
-  }, [sessions]);
+  }, [filteredSessions]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,7 +171,7 @@ export default function Home() {
     e.preventDefault();
     if (!user || !groupName.trim()) return;
 
-    await createGroup({
+    const groupId = await createGroup({
       userId: user._id,
       name: groupName.trim(),
       description: groupDescription.trim() || undefined,
@@ -169,7 +184,18 @@ export default function Home() {
     setGroupName("");
     setGroupDescription("");
     setGroupMembersInput("");
+    setSelectedGroupFilter(groupId);
     setShowCreateGroup(false);
+  };
+
+  const handleMoveSession = async (nextGroupId: string) => {
+    if (!user || !activeSession) return;
+    await moveSessionToGroup({
+      sessionId: activeSession._id,
+      userId: user._id,
+      groupId: nextGroupId ? (nextGroupId as Id<"groups">) : undefined,
+    });
+    setSelectedGroupFilter(nextGroupId || "private");
   };
 
   if (!ready) {
@@ -255,7 +281,21 @@ export default function Home() {
               Vytvoř session, naházej lahve a během ochutnávky rychle zapisuj dojmy i skóre.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[220px] flex-1 sm:flex-none">
+              <label className="mb-1 block text-xs uppercase tracking-[0.2em] text-stone-400">Degustační skupina</label>
+              <select
+                value={selectedGroupFilter}
+                onChange={(e) => setSelectedGroupFilter(e.target.value)}
+                className="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-white outline-none hover:bg-white/15"
+              >
+                <option value="private" className="text-stone-900">Soukromé</option>
+                <option value="all" className="text-stone-900">Všechny</option>
+                {safeGroups.map((group) => (
+                  <option key={group._id} value={group._id} className="text-stone-900">{group.name}</option>
+                ))}
+              </select>
+            </div>
             <button
               onClick={() => setShowCreateGroup(true)}
               className="inline-flex items-center gap-2 rounded-2xl border border-white/15 px-4 py-3 text-sm text-stone-200 hover:bg-white/10"
@@ -296,8 +336,8 @@ export default function Home() {
                 </span>
               </div>
               <div className="space-y-3">
-                {sessions?.length ? (
-                  sessions.map((session) => (
+                {filteredSessions.length ? (
+                  filteredSessions.map((session) => (
                     <button
                       key={session._id}
                       onClick={() => setSelectedSessionId(session._id)}
@@ -324,7 +364,7 @@ export default function Home() {
                   ))
                 ) : (
                   <div className="rounded-2xl bg-stone-50 p-4 text-sm text-stone-500">
-                    Zatím nic. Vytvoř první session a můžeš začít.
+                    V tomhle výběru zatím nic není. Vytvoř session nebo ji přesuň do jiné skupiny.
                   </div>
                 )}
               </div>
@@ -355,6 +395,19 @@ export default function Home() {
                         </span>
                       </div>
                       {activeSession.notes && <p className="mt-4 text-sm text-stone-600">{activeSession.notes}</p>}
+                      <div className="mt-4 max-w-xs">
+                        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500">Viditelnost session</label>
+                        <select
+                          value={activeSession.groupId ?? ""}
+                          onChange={(e) => void handleMoveSession(e.target.value)}
+                          className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm outline-none focus:border-amber-500"
+                        >
+                          <option value="">Soukromá</option>
+                          {safeGroups.map((group) => (
+                            <option key={group._id} value={group._id}>{group.name}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                     <button
                       onClick={() => {

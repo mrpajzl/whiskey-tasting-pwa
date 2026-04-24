@@ -143,3 +143,31 @@ export const updateSessionStatus = mutation({
     await ctx.db.patch(args.sessionId, { status: args.status });
   },
 });
+
+export const moveSessionToGroup = mutation({
+  args: {
+    sessionId: v.id("tastingSessions"),
+    userId: v.id("users"),
+    groupId: v.optional(v.id("groups")),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Session nenalezena.");
+    if (session.createdBy !== args.userId) {
+      throw new Error("Přesouvat session může jen autor.");
+    }
+
+    if (args.groupId) {
+      const membership = await ctx.db
+        .query("groupMembers")
+        .withIndex("by_group_and_user", (q) => q.eq("groupId", args.groupId!).eq("userId", args.userId))
+        .first();
+
+      if (!membership) {
+        throw new Error("Do této skupiny nepatříš.");
+      }
+    }
+
+    await ctx.db.patch(args.sessionId, { groupId: args.groupId });
+  },
+});
