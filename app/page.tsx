@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { CalendarDays, ChevronRight, LogOut, MapPin, Pencil, Plus, Star, Users, Wine } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronRight, GlassWater, LogOut, MapPin, Pencil, Plus, Star, Users, Wine } from "lucide-react";
 import AddBottleModal from "./components/AddBottleModal";
 import BottleRating from "./components/BottleRating";
 
@@ -43,6 +43,11 @@ export default function Home() {
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
   const [groupMembersInput, setGroupMembersInput] = useState("");
+  const [groupMenuOpen, setGroupMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const groupMenuRef = useRef<HTMLDivElement | null>(null);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   const createOrUpdateUser = useMutation(api.users.createOrUpdateUser);
   const createSession = useMutation(api.sessions.createSession);
@@ -96,6 +101,28 @@ export default function Home() {
       setSelectedSessionId(filteredSessions[0]?._id ?? null);
     }
   }, [filteredSessions, selectedSessionId]);
+
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (groupMenuRef.current && !groupMenuRef.current.contains(target)) {
+        setGroupMenuOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, []);
+
+  const activeGroupLabel =
+    selectedGroupFilter === "private"
+      ? "Soukromé session"
+      : selectedGroupFilter === "all"
+        ? "Všechny sessiony"
+        : safeGroups.find((group) => group._id === selectedGroupFilter)?.name ?? "Vyber skupinu";
 
   const stats = useMemo(() => {
     const bottleCount = filteredSessions.reduce((sum, session) => sum + session.bottleCount, 0);
@@ -273,54 +300,119 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-stone-100 text-stone-900">
       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
-        <header className="mb-4 rounded-[32px] bg-stone-950 px-4 py-4 text-white shadow-xl sm:mb-6 sm:px-6 sm:py-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-amber-300/70">whiskey tasting</p>
-              <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Ahoj {displayName.split(" ")[0]}</h1>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-stone-300">
-                Vyber skupinu, otevři session a během ochutnávky jen rychle přidávej lahve a hodnocení.
-              </p>
+        <header className="mb-3 rounded-[28px] bg-stone-950 px-4 py-3 text-white shadow-xl sm:mb-4 sm:px-5 sm:py-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500 text-stone-950 shadow-lg shadow-amber-500/20">
+                <GlassWater className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-amber-300/70">Whiskey tasting</p>
+                <p className="mt-0.5 text-sm font-medium text-stone-300">{activeGroupLabel}</p>
+              </div>
             </div>
-            <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[220px] flex-1 sm:flex-none">
-              <label className="mb-1 block text-xs uppercase tracking-[0.2em] text-stone-400">Degustační skupina</label>
-              <select
-                value={selectedGroupFilter}
-                onChange={(e) => setSelectedGroupFilter(e.target.value)}
-                className="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-white outline-none hover:bg-white/15"
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="relative" ref={groupMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGroupMenuOpen((value) => !value);
+                    setUserMenuOpen(false);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white hover:bg-white/10"
+                >
+                  <span className="max-w-[180px] truncate">{activeGroupLabel}</span>
+                  <ChevronDown className={`h-4 w-4 text-stone-400 transition ${groupMenuOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {groupMenuOpen && (
+                  <div className="absolute right-0 z-30 mt-2 w-72 overflow-hidden rounded-[24px] border border-stone-800 bg-stone-950 p-2 shadow-2xl shadow-black/30">
+                    <p className="px-3 py-2 text-[11px] uppercase tracking-[0.22em] text-stone-500">Degustační skupina</p>
+                    <div className="space-y-1">
+                      {[
+                        { value: "private", label: "Soukromé session" },
+                        { value: "all", label: "Všechny sessiony" },
+                        ...safeGroups.map((group) => ({ value: group._id, label: group.name })),
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setSelectedGroupFilter(option.value);
+                            setGroupMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm transition ${
+                            selectedGroupFilter === option.value
+                              ? "bg-amber-500 text-stone-950"
+                              : "text-stone-200 hover:bg-white/5"
+                          }`}
+                        >
+                          <span className="truncate">{option.label}</span>
+                          {selectedGroupFilter === option.value && <span className="text-xs font-semibold">Aktivní</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => setShowCreateGroup(true)}
+                className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2.5 text-sm text-stone-200 hover:bg-white/10"
               >
-                <option value="private" className="text-stone-900">Soukromé</option>
-                <option value="all" className="text-stone-900">Všechny</option>
-                {safeGroups.map((group) => (
-                  <option key={group._id} value={group._id} className="text-stone-900">{group.name}</option>
-                ))}
-              </select>
-            </div>
-            <button
-              onClick={() => setShowCreateGroup(true)}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/15 px-4 py-3 text-sm text-stone-200 hover:bg-white/10"
-            >
-              <Users className="h-4 w-4" />
-              Nová skupina
-            </button>
-            <button
-              onClick={() => setShowCreateSession(true)}
-              className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-4 py-3 font-semibold text-stone-950 hover:bg-amber-400"
-            >
-              <Plus className="h-4 w-4" />
-              Nová session
-            </button>
-            <button
-              onClick={handleLogout}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/15 px-4 py-3 text-sm text-stone-200 hover:bg-white/10"
-            >
-              <LogOut className="h-4 w-4" />
-              Odhlásit
-            </button>
+                <Users className="h-4 w-4" />
+                Nová skupina
+              </button>
+              <button
+                onClick={() => setShowCreateSession(true)}
+                className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-4 py-2.5 font-semibold text-stone-950 hover:bg-amber-400"
+              >
+                <Plus className="h-4 w-4" />
+                Nová session
+              </button>
+
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserMenuOpen((value) => !value);
+                    setGroupMenuOpen(false);
+                  }}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white hover:bg-white/10"
+                >
+                  {displayName.slice(0, 1).toUpperCase()}
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-[24px] border border-stone-200 bg-white p-2 shadow-2xl shadow-stone-900/10">
+                    <div className="px-3 py-2">
+                      <p className="text-sm font-semibold text-stone-900">{displayName}</p>
+                      <p className="text-xs text-stone-500">{email}</p>
+                    </div>
+                    <div className="mt-1 border-t border-stone-100 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-2 rounded-2xl px-3 py-3 text-left text-sm text-stone-700 hover:bg-stone-50"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Odhlásit
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>
+
+        <section className="mb-4 px-1 sm:mb-6">
+          <h1 className="text-3xl font-bold text-stone-950 sm:text-4xl">Ahoj {displayName}</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
+            Vyber skupinu, otevři session a během ochutnávky jen rychle přidávej lahve a hodnocení.
+          </p>
+        </section>
 
         <div className="mb-4 grid gap-3 sm:mb-6 sm:grid-cols-3">
           <StatCard label="Sessiony" value={stats.sessionCount} />
