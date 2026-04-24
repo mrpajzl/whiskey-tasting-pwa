@@ -148,17 +148,21 @@ export const updateSessionStatus = mutation({
   },
 });
 
-export const moveSessionToGroup = mutation({
+export const updateSession = mutation({
   args: {
     sessionId: v.id("tastingSessions"),
     userId: v.id("users"),
+    name: v.string(),
+    sessionDate: v.number(),
+    location: v.optional(v.string()),
+    notes: v.optional(v.string()),
     groupId: v.optional(v.id("groups")),
   },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Session nenalezena.");
     if (session.createdBy !== args.userId) {
-      throw new Error("Přesouvat session může jen autor.");
+      throw new Error("Upravovat session může jen autor.");
     }
 
     if (args.groupId) {
@@ -172,6 +176,12 @@ export const moveSessionToGroup = mutation({
       }
     }
 
-    await ctx.db.patch(args.sessionId, { groupId: args.groupId });
+    await ctx.db.patch(args.sessionId, {
+      name: args.name,
+      sessionDate: args.sessionDate,
+      location: args.location,
+      notes: args.notes,
+      groupId: args.groupId,
+    });
   },
 });

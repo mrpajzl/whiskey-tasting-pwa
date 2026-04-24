@@ -28,6 +28,7 @@ export default function Home() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<Id<"tastingSessions"> | null>(null);
   const [showBottleModal, setShowBottleModal] = useState(false);
+  const [showSessionSettings, setShowSessionSettings] = useState(false);
   const [editingBottle, setEditingBottle] = useState<any | null>(null);
 
   const [sessionName, setSessionName] = useState("");
@@ -39,6 +40,11 @@ export default function Home() {
   });
   const [sessionNotes, setSessionNotes] = useState("");
   const [sessionGroupId, setSessionGroupId] = useState("");
+  const [settingsName, setSettingsName] = useState("");
+  const [settingsDate, setSettingsDate] = useState("");
+  const [settingsLocation, setSettingsLocation] = useState("");
+  const [settingsNotes, setSettingsNotes] = useState("");
+  const [settingsGroupId, setSettingsGroupId] = useState("");
   const [selectedGroupFilter, setSelectedGroupFilter] = useState("private");
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
@@ -51,7 +57,7 @@ export default function Home() {
 
   const createOrUpdateUser = useMutation(api.users.createOrUpdateUser);
   const createSession = useMutation(api.sessions.createSession);
-  const moveSessionToGroup = useMutation(api.sessions.moveSessionToGroup);
+  const updateSession = useMutation(api.sessions.updateSession);
   const createGroup = useMutation(api.groups.createGroup);
 
   const user = useQuery(api.users.getCurrentUser, email ? { email } : "skip");
@@ -215,14 +221,35 @@ export default function Home() {
     setShowCreateGroup(false);
   };
 
-  const handleMoveSession = async (nextGroupId: string) => {
-    if (!user || !activeSession) return;
-    await moveSessionToGroup({
+  const openSessionSettings = () => {
+    if (!activeSession) return;
+    const localDate = new Date(activeSession.sessionDate - new Date().getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+    setSettingsName(activeSession.name);
+    setSettingsDate(localDate);
+    setSettingsLocation(activeSession.location ?? "");
+    setSettingsNotes(activeSession.notes ?? "");
+    setSettingsGroupId(activeSession.groupId ?? "");
+    setShowSessionSettings(true);
+  };
+
+  const handleUpdateSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !activeSession || !settingsName.trim()) return;
+
+    await updateSession({
       sessionId: activeSession._id,
       userId: user._id,
-      groupId: nextGroupId ? (nextGroupId as Id<"groups">) : undefined,
+      name: settingsName.trim(),
+      sessionDate: new Date(settingsDate).getTime(),
+      location: settingsLocation.trim() || undefined,
+      notes: settingsNotes.trim() || undefined,
+      groupId: settingsGroupId ? (settingsGroupId as Id<"groups">) : undefined,
     });
-    setSelectedGroupFilter(nextGroupId || "private");
+
+    setSelectedGroupFilter(settingsGroupId || "private");
+    setShowSessionSettings(false);
   };
 
   if (!ready) {
@@ -512,30 +539,25 @@ export default function Home() {
                       </div>
                       {activeSession.notes && <p className="mt-4 max-w-2xl text-sm leading-6 text-stone-600">{activeSession.notes}</p>}
                     </div>
-                    <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[260px]">
-                      <div>
-                        <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-stone-500">Viditelnost session</label>
-                        <select
-                          value={activeSession.groupId ?? ""}
-                          onChange={(e) => void handleMoveSession(e.target.value)}
-                          className="w-full rounded-2xl border border-stone-300 bg-stone-50 px-4 py-3 text-sm outline-none focus:border-amber-500"
-                        >
-                          <option value="">Soukromá</option>
-                          {safeGroups.map((group) => (
-                            <option key={group._id} value={group._id}>{group.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    <button
-                      onClick={() => {
-                        setEditingBottle(null);
-                        setShowBottleModal(true);
-                      }}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-600 px-4 py-3 font-semibold text-white hover:bg-amber-700"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Přidat lahev
-                    </button>
+                    <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[220px]">
+                      <button
+                        type="button"
+                        onClick={openSessionSettings}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-300 px-4 py-3 font-medium text-stone-700 hover:bg-stone-50"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Upravit session
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingBottle(null);
+                          setShowBottleModal(true);
+                        }}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-600 px-4 py-3 font-semibold text-white hover:bg-amber-700"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Přidat lahev
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -683,6 +705,83 @@ export default function Home() {
                 </button>
               </div>
             </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSessionSettings && activeSession && user && (
+        <div className="fixed inset-0 z-40 overflow-y-auto bg-black/50 p-4">
+          <div className="flex min-h-full items-end justify-center py-4 sm:items-center">
+            <div className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
+              <div className="border-b border-stone-200 px-4 py-3 sm:px-5 sm:py-4">
+                <h2 className="text-xl font-semibold text-stone-900">Nastavení session</h2>
+                <p className="text-sm text-stone-500">Uprav název, termín, místo, poznámku i skupinu.</p>
+              </div>
+              <form onSubmit={handleUpdateSession} className="max-h-[calc(100dvh-7rem)] space-y-4 overflow-y-auto px-4 py-4 overscroll-contain sm:px-5 sm:py-5">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-stone-700">Název session</label>
+                  <input
+                    value={settingsName}
+                    onChange={(e) => setSettingsName(e.target.value)}
+                    className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-stone-700">Datum a čas</label>
+                    <input
+                      type="datetime-local"
+                      value={settingsDate}
+                      onChange={(e) => setSettingsDate(e.target.value)}
+                      className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-stone-700">Místo</label>
+                    <input
+                      value={settingsLocation}
+                      onChange={(e) => setSettingsLocation(e.target.value)}
+                      className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-stone-700">Skupina / viditelnost</label>
+                  <select
+                    value={settingsGroupId}
+                    onChange={(e) => setSettingsGroupId(e.target.value)}
+                    className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                  >
+                    <option value="">Soukromá session</option>
+                    {safeGroups.map((group) => (
+                      <option key={group._id} value={group._id}>{group.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-stone-700">Poznámka</label>
+                  <textarea
+                    value={settingsNotes}
+                    onChange={(e) => setSettingsNotes(e.target.value)}
+                    rows={4}
+                    className="w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none focus:border-amber-500"
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button className="flex-1 rounded-2xl bg-amber-600 px-4 py-3 font-semibold text-white hover:bg-amber-700">
+                    Uložit změny
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSessionSettings(false)}
+                    className="rounded-2xl border border-stone-300 px-4 py-3 font-medium text-stone-700 hover:bg-stone-50"
+                  >
+                    Zrušit
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
