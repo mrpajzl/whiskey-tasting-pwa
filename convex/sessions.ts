@@ -126,8 +126,12 @@ export const getSession = query({
       })
     );
 
+    const group = session.groupId ? await ctx.db.get(session.groupId) : null;
+    const groupName = group && "name" in group ? group.name : undefined;
+
     return {
       ...session,
+      groupName,
       notes: session.notes ?? session.description,
       bottles: bottlesWithRatings,
     };
