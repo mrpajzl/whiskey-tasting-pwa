@@ -353,17 +353,22 @@ export default function Home() {
                         </button>
                       ))}
                     </div>
+                    <div className="mt-2 border-t border-white/5 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCreateGroup(true);
+                          setGroupMenuOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-2xl px-3 py-3 text-left text-sm font-medium text-stone-200 hover:bg-white/5"
+                      >
+                        <Users className="h-4 w-4" />
+                        Vytvořit novou skupinu
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-
-              <button
-                onClick={() => setShowCreateGroup(true)}
-                className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2.5 text-sm text-stone-200 hover:bg-white/10"
-              >
-                <Users className="h-4 w-4" />
-                Nová skupina
-              </button>
               <button
                 onClick={() => setShowCreateSession(true)}
                 className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-4 py-2.5 font-semibold text-stone-950 hover:bg-amber-400"
