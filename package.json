@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:catalog": "node scripts/seed-scotch-catalog.mjs",
+    "seed:catalog:reset": "node scripts/seed-scotch-catalog.mjs --reset"
   },
   "dependencies": {
     "convex": "^1.31.7",

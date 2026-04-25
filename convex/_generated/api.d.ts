@@ -10,6 +10,8 @@
 
 import type * as auth from "../auth.js";
 import type * as bottles from "../bottles.js";
+import type * as catalog from "../catalog.js";
+import type * as catalogSeedData from "../catalogSeedData.js";
 import type * as dashboard from "../dashboard.js";
 import type * as files from "../files.js";
 import type * as groups from "../groups.js";
@@ -26,6 +28,8 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   bottles: typeof bottles;
+  catalog: typeof catalog;
+  catalogSeedData: typeof catalogSeedData;
   dashboard: typeof dashboard;
   files: typeof files;
   groups: typeof groups;

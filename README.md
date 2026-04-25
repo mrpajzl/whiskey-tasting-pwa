@@ -115,6 +115,8 @@ The app uses Convex with the following collections:
 - **tastingSessions**: Tasting events
 - **bottles**: Whiskey bottles
 - **ratings**: User ratings and tasting notes
+- **distilleries**: Autocomplete-ready distillery catalog
+- **catalogBottles**: Reusable bottle catalog for quick entry
 
 ## 🎨 Features in Detail
 
@@ -198,9 +200,18 @@ npm run dev
 # Build for production
 npm run build
 
+# Seed the Scotch starter catalog into Convex
+npm run seed:catalog
+
+# Or reset catalog tables first, then seed again
+npm run seed:catalog:reset
+
 # Start production server
 npm start
 ```
+
+The starter catalog is a hand-curated Scotch-first dataset kept in `convex/catalogSeedData.ts`.
+It uses short factual metadata from public distillery/product pages plus public distillery/region facts, and avoids importing tasting-note copy or commercial datasets.
 
 ## 📱 Mobile App
 
