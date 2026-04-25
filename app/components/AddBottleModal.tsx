@@ -51,9 +51,10 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
     bottle?.imageStorageId ? { storageId: bottle.imageStorageId } : "skip"
   );
 
+  const normalizedSearchText = searchText.trim();
   const catalog = useQuery(
     api.catalog.searchCatalog,
-    searchText.trim().length >= 2 ? { query: searchText } : "skip"
+    normalizedSearchText.length >= 2 ? { query: normalizedSearchText } : "skip"
   );
 
   useEffect(() => {
@@ -70,7 +71,8 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
   }, [bottle]);
 
   const suggestions = useMemo(() => {
-    if (!catalog) return [];
+    if (normalizedSearchText.length < 2) return [];
+    if (!catalog) return null;
 
     const distillerySuggestions = catalog.distilleries.map((item) => ({
       kind: "distillery" as const,
@@ -103,7 +105,7 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
     }));
 
     return [...distillerySuggestions, ...bottleSuggestions].slice(0, 10);
-  }, [catalog, name]);
+  }, [catalog, name, normalizedSearchText]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,9 +203,11 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
                   className="w-full rounded-2xl border border-stone-300 py-3 pl-11 pr-4 outline-none focus:border-amber-500"
                 />
               </div>
-              {searchText.trim().length >= 2 && (
+              {normalizedSearchText.length >= 2 && (
                 <div className="mt-2 overflow-hidden rounded-2xl border border-stone-200 bg-stone-50">
-                  {suggestions.length > 0 ? (
+                  {suggestions === null ? (
+                    <div className="px-4 py-3 text-sm text-stone-500">Načítám výsledky…</div>
+                  ) : suggestions.length > 0 ? (
                     suggestions.map((item, index) => (
                       <button
                         key={`${item.kind}-${item.label}-${index}`}
@@ -216,7 +220,7 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
                       </button>
                     ))
                   ) : (
-                    <div className="px-4 py-3 text-sm text-stone-500">V katalogu zatím nic nesedí na „{searchText}“.</div>
+                    <div className="px-4 py-3 text-sm text-stone-500">V katalogu zatím nic nesedí na „{normalizedSearchText}“.</div>
                   )}
                 </div>
               )}
