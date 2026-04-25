@@ -71,34 +71,39 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
 
   const suggestions = useMemo(() => {
     if (!catalog) return [];
-    return [
-      ...catalog.bottles.map((item) => ({
-        kind: "bottle" as const,
-        label: item.name,
-        sublabel: [item.distillery, item.region, item.abv ? `${item.abv}%` : null].filter(Boolean).join(" • "),
-        action: () => {
+
+    const distillerySuggestions = catalog.distilleries.map((item) => ({
+      kind: "distillery" as const,
+      label: item.name,
+      sublabel: item.region ?? "Palírna",
+      action: () => {
+        setDistillery(item.name ?? "");
+        if (!name.trim()) {
           setName(item.name ?? "");
-          setDistillery(item.distillery ?? "");
-          setCategory(item.category ?? "Single Malt");
-          setRegion(item.region ?? "");
-          setAge(item.age?.toString() ?? "");
-          setAbv(item.abv?.toString() ?? "");
-          setNotes(item.notes ?? "");
-          setSearchText("");
-        },
-      })),
-      ...catalog.distilleries.map((item) => ({
-        kind: "distillery" as const,
-        label: item.name,
-        sublabel: item.region ?? "Palírna",
-        action: () => {
-          setDistillery(item.name ?? "");
-          setRegion(item.region ?? "");
-          setSearchText("");
-        },
-      })),
-    ].slice(0, 8);
-  }, [catalog]);
+        }
+        setRegion(item.region ?? "");
+        setSearchText("");
+      },
+    }));
+
+    const bottleSuggestions = catalog.bottles.map((item) => ({
+      kind: "bottle" as const,
+      label: item.name,
+      sublabel: [item.distillery, item.region, item.abv ? `${item.abv}%` : null].filter(Boolean).join(" • "),
+      action: () => {
+        setName(item.name ?? "");
+        setDistillery(item.distillery ?? "");
+        setCategory(item.category ?? "Single Malt");
+        setRegion(item.region ?? "");
+        setAge(item.age?.toString() ?? "");
+        setAbv(item.abv?.toString() ?? "");
+        setNotes(item.notes ?? "");
+        setSearchText("");
+      },
+    }));
+
+    return [...distillerySuggestions, ...bottleSuggestions].slice(0, 10);
+  }, [catalog, name]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,19 +201,23 @@ export default function AddBottleModal({ sessionId, userId, onClose, bottle }: A
                   className="w-full rounded-2xl border border-stone-300 py-3 pl-11 pr-4 outline-none focus:border-amber-500"
                 />
               </div>
-              {suggestions.length > 0 && (
+              {searchText.trim().length >= 2 && (
                 <div className="mt-2 overflow-hidden rounded-2xl border border-stone-200 bg-stone-50">
-                  {suggestions.map((item, index) => (
-                    <button
-                      key={`${item.kind}-${item.label}-${index}`}
-                      type="button"
-                      onClick={item.action}
-                      className="block w-full border-b border-stone-200 px-4 py-3 text-left last:border-b-0 hover:bg-white"
-                    >
-                      <p className="font-medium text-stone-900">{item.label}</p>
-                      <p className="text-sm text-stone-500">{item.sublabel}</p>
-                    </button>
-                  ))}
+                  {suggestions.length > 0 ? (
+                    suggestions.map((item, index) => (
+                      <button
+                        key={`${item.kind}-${item.label}-${index}`}
+                        type="button"
+                        onClick={item.action}
+                        className="block w-full border-b border-stone-200 px-4 py-3 text-left last:border-b-0 hover:bg-white"
+                      >
+                        <p className="font-medium text-stone-900">{item.label}</p>
+                        <p className="text-sm text-stone-500">{item.kind === "distillery" ? `Palírna • ${item.sublabel}` : item.sublabel}</p>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-3 text-sm text-stone-500">V katalogu zatím nic nesedí na „{searchText}“.</div>
+                  )}
                 </div>
               )}
             </div>
